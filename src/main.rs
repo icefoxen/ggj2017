@@ -99,7 +99,8 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 5, -1.0);
+        f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
+        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
         f
     }
 
@@ -129,7 +130,7 @@ impl Field {
         // Setting this to 0.98 makes the wave go forever,
         // setting it to 0.97 makes it just kind of go plonk.
         // At least with a surface tension of 3.0.
-        let decay_factor = 0.999;
+        let decay_factor = 0.99;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 // let val = self.0[x][y].position * decay_factor;
@@ -190,9 +191,7 @@ impl Field {
                 let forces = val.restoring_force() + neighbor_force / surface_tension;
                 val.velocity += forces;
                 val.velocity = clamp(val.velocity, -1.0, 1.0);
-                if f32::abs(forces) > 1.0 {
-                    println!("forces: {}", forces);
-                }
+
                 // println!("{:?}", val);
                 self.0[x][y] = val;
             }
@@ -213,6 +212,7 @@ impl Field {
             for y in min_y..max_y {
                 // println!("Setting cell {},{} to force {}", x, y, force);
                 self.0[x][y].position = force;
+                // self.0[x][y].velocity += force;
             }
         }
     }
@@ -230,6 +230,7 @@ impl Field {
 struct MainState {
     field: Field,
     ship: Ship,
+    frame: usize,
 }
 
 impl MainState {
@@ -238,6 +239,7 @@ impl MainState {
         MainState {
             field: f,
             ship: Ship::new(0 as i32, 0 as i32, ctx),
+            frame: 0,
         }
     }
 
@@ -251,7 +253,8 @@ impl MainState {
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
         self.field.update();
-        // println!("FPS: {}", ggez::timer::get_fps(ctx));
+        self.frame += 1;
+        // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
         Ok(())
     }
 
@@ -269,6 +272,22 @@ impl game::EventHandler for MainState {
     fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
         println!("Hi");
         self.ship.key_down_event(_keycode, _keymod, _repeat);
+    }
+
+    fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
+        let x = x as u32 / FIELD_CELL_SIZE;
+        let y = y as u32 / FIELD_CELL_SIZE;
+        println!("Creating splash at {}, {}", x, y);
+        match button {
+            MouseButton::Left => {
+                self.field.create_splash(x as usize, y as usize, 3, 1.0);
+            }
+
+            MouseButton::Right => {
+                self.field.create_splash(x as usize, y as usize, 3, -1.0);
+            }
+            _ => (),
+        }
     }
 }
 
