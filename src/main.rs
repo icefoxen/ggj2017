@@ -22,17 +22,17 @@ use ship::Ship;
 
 // SDL2 drawing on Windows appears to be *way*
 // slower than on Linux or Mac.  Ick.
-#[cfg(target_os = "windows")] 
+#[cfg(target_os = "windows")]
 const FIELD_WIDTH: usize = 40;
-#[cfg(target_os = "windows")] 
+#[cfg(target_os = "windows")]
 const FIELD_HEIGHT: usize = 30;
-#[cfg(target_os = "windows")] 
+#[cfg(target_os = "windows")]
 const FIELD_CELL_SIZE: u32 = 20;
 
 
 #[cfg(not(target_os = "windows"))]
 const FIELD_WIDTH: usize = 200;
-#[cfg(not(target_os = "windows"))] 
+#[cfg(not(target_os = "windows"))]
 const FIELD_HEIGHT: usize = 150;
 #[cfg(not(target_os = "windows"))]
 const FIELD_CELL_SIZE: u32 = 4;
@@ -289,9 +289,7 @@ impl MainState {
     }
 
     fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
-        self.ship.draw(ctx);
-
-        Ok(())
+        self.ship.draw(ctx)
     }
 }
 
@@ -315,7 +313,7 @@ impl game::EventHandler for MainState {
         // Background
         self.field.draw(ctx)?;
 
-        //Foreground
+        // Foreground
         self.draw_ship(ctx)?;
 
         ctx.renderer.present();
