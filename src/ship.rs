@@ -14,6 +14,10 @@ use std::f64::consts;
 use std::time::Duration;
 use std::collections::HashSet;
 
+fn magnitude(vec: &Vector2<f32>) -> f32 {
+    (vec.x.powi(2) + vec.y.powi(2)).sqrt()
+}
+
 pub struct Ship {
     pub location: Vector2<f32>,
     pub velocity: Vector2<f32>,
@@ -34,7 +38,7 @@ impl Ship {
             velocity: Vector2::new(0.0, 0.0),
             scale: 1.0 as f32,
             image: Image::new(ctx, "ship.png").unwrap(),
-            speed: 0.02,
+            speed: 1.0,
             turning_speed: 6.0,
             bearing: Rotation2::new(Vector1::new(0.0)),
             keys_down: HashSet::new()
@@ -53,30 +57,31 @@ impl Ship {
         for keycode in &self.keys_down {
             match *keycode {
                 Keycode::W | Keycode::Up => {
-                    let mut accel = Vector2::new(0.0, -1.0 * speed as f32);
-                    accel.rotate(&bearing);
-                    self.velocity += accel;
+                    let mag = magnitude(&velocity) + 1.0;
+                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * bearing.rotation().x.cos());
                 },
                 Keycode::A | Keycode::Left => {
                     self.bearing.append_rotation_mut(&Vector1::new(-0.1));
-                    self.velocity.rotate(&bearing);
+                    let mag = magnitude(&velocity);
+                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * bearing.rotation().x.cos());
+
                 },
                 Keycode::S | Keycode::Down => (),
                 Keycode::D | Keycode::Right => {
                     self.bearing.append_rotation_mut(&Vector1::new(0.1));
-                    self.velocity.rotate(&bearing);
+                    let mag = magnitude(&velocity);
+                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * bearing.rotation().x.cos());
                 },
                 _ => ()
             }
         }
-
-        println!("bearing: {:?} velocity: {:?} location: {:?}", self.bearing, self.velocity, self.location);
+        println!("bearing: {:?} velocity: {:?}", bearing.rotation().x, velocity);
     }
 
     pub fn draw(&mut self, ctx: &mut Context) {
         let r = graphics::Rect::new(self.location.x as i32, self.location.y as i32, (128.0 * self.scale) as u32, (128.0 * self.scale) as u32);
 
-        self.image.draw_ex(ctx, None, Some(r), self.bearing.rotation().x as f64, None, false, false);
+        self.image.draw_ex(ctx, None, Some(r), self.bearing.rotation().x.to_degrees() as f64, None, false, false);
     }
 
     pub fn key_down_event(&mut self, _keycode: Keycode) {

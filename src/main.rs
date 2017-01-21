@@ -19,9 +19,9 @@ use std::cmp::{min, max};
 mod ship;
 use ship::Ship;
 
+
 const FIELD_WIDTH: usize = 200;
 const FIELD_HEIGHT: usize = 150;
-
 const FIELD_CELL_SIZE: u32 = 4;
 
 // stolen from ggez-goodies particles; we really should have a general
@@ -42,17 +42,38 @@ fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
     Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
 }
 
+fn interp_between_square(t: f64, v1: Color, v2: Color) -> Color {
+
+    let (r1, g1, b1, a1) = v1.rgba();
+    let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
+
+    let (r2, g2, b2, a2) = v2.rgba();
+
+    let dr = (r2 - r1) as f64;
+    let dg = (g2 - g1) as f64;
+    let db = (b2 - b1) as f64;
+    let da = (a2 - a1) as f64;
+
+    let t2 = f64::sqrt(t);
+    let (rr, rg, rb, ra) = (fr1 + dr * t2, fg1 + dg * t2, fb1 + db * t2, fa1 + da * t2);
+    Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
+}
+
+fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
+    f32::min(f32::max(val, lower), upper)
+}
+
 // Fields values are 0 to +1
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
     let black = Color::RGBA(0, 0, 0, 255);
-    let negative_max = Color::RGBA(128, 0, 0, 255);
-    let positive_max = Color::RGBA(0, 0, 128, 255);
+    let negative_max = Color::RGBA(255, 0, 0, 255);
+    let positive_max = Color::RGBA(0, 0, 255, 255);
     if val < 0.0 {
-        interp_between(-val as f64, black, negative_max)
+        interp_between_square(-val as f64, black, negative_max)
     } else {
-        interp_between(val as f64, black, positive_max)
+        interp_between_square(val as f64, black, positive_max)
     }
 }
 
@@ -78,9 +99,14 @@ impl WaveType {
 
 impl Default for WaveType {
     fn default() -> Self {
+        // If you make these 0 the optimizer/OS won't
+        // actually allocate space for the arrays it needs
+        // until the game is running, I suspect.
+        // So it gets laggy for the first few seconds.
+        // With a slight offset it APPEARS to MOSTLY fix the problem.
         WaveType {
-            velocity: 0.0,
-            position: 0.0,
+            velocity: 0.001,
+            position: 0.001,
         }
     }
 }
@@ -96,7 +122,8 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(100, 75, 5, 1.0);
+        f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
+        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
         f
     }
 
@@ -122,11 +149,27 @@ impl Field {
     }
 
     fn decay(&mut self) {
+        // Decay intensity.
+        // Setting this to 0.98 makes the wave go forever,
+        // setting it to 0.97 makes it just kind of go plonk.
+        // At least with a surface tension of 3.0.
+        let decay_factor = 0.99;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
-                // Decay intensity.
-                let val = self.0[x][y].position * 0.95;
-                self.0[x][y].position = val;
+                // let val = self.0[x][y].position * decay_factor;
+                // self.0[x][y].position = val;
+                // Decaying position vs. velocity doesn't seem
+                // to have made much difference
+                self.0[x][y].velocity *= decay_factor;
+                self.0[x][y].position *= decay_factor;
+
+                // We might just want to zero this out if it goes below a certain point.
+                // if f32::abs(self.0[x][y].velocity) < 0.001 {
+                //     self.0[x][y].velocity = 0.0;
+                // }
+                // if f32::abs(self.0[x][y].position) < 0.001 {
+                //     self.0[x][y].position = 0.0;
+                // }
             }
         }
     }
@@ -152,6 +195,9 @@ impl Field {
     fn propegate(&mut self) {
         let dt = 0.01;
         let sqrt2 = std::f32::consts::SQRT_2;
+        // How strongly each cell is affected by its neighbors.
+        // Higher numbers mean weaker.
+        let surface_tension = 4.0;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let mut val = self.0[x][y];
@@ -159,6 +205,7 @@ impl Field {
                 let iy = y as i32;
 
                 val.position += val.velocity * dt;
+                // val.position = clamp(val.position, -1.0, 1.0);
                 // total force = restoring force plus a force based on the
                 // sum of differences in position  between itself and its
                 // neighbors
@@ -173,8 +220,10 @@ impl Field {
                                      self.relative_position(ix, iy, 1, -1) / sqrt2 +
                                      self.relative_position(ix, iy, -1, 1) / sqrt2 +
                                      self.relative_position(ix, iy, 1, 1) / sqrt2;
-                let forces = val.restoring_force() + neighbor_force / 1.0;
+                let forces = val.restoring_force() + neighbor_force / surface_tension;
                 val.velocity += forces;
+                val.velocity = clamp(val.velocity, -1.0, 1.0);
+
                 // println!("{:?}", val);
                 self.0[x][y] = val;
             }
@@ -195,6 +244,7 @@ impl Field {
             for y in min_y..max_y {
                 // println!("Setting cell {},{} to force {}", x, y, force);
                 self.0[x][y].position = force;
+                // self.0[x][y].velocity += force;
             }
         }
     }
@@ -212,6 +262,7 @@ impl Field {
 struct MainState {
     field: Field,
     ship: Ship,
+    frame: usize,
 }
 
 impl MainState {
@@ -220,6 +271,7 @@ impl MainState {
         MainState {
             field: f,
             ship: Ship::new(0 as i32, 0 as i32, ctx),
+            frame: 0,
         }
     }
 
@@ -234,8 +286,13 @@ impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
         self.field.update();
 
+
         self.ship.update();
         // println!("FPS: {}", ggez::timer::get_fps(ctx));
+
+        self.frame += 1;
+        // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
+
         Ok(())
     }
 
@@ -256,10 +313,26 @@ impl game::EventHandler for MainState {
         self.ship.key_down_event(_keycode);
     }
 
+
     fn key_up_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
         self.ship.key_up_event(_keycode);
     }
 
+    fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
+        let x = x as u32 / FIELD_CELL_SIZE;
+        let y = y as u32 / FIELD_CELL_SIZE;
+        println!("Creating splash at {}, {}", x, y);
+        match button {
+            MouseButton::Left => {
+                self.field.create_splash(x as usize, y as usize, 3, 1.0);
+            }
+
+            MouseButton::Right => {
+                self.field.create_splash(x as usize, y as usize, 3, -1.0);
+            }
+            _ => (),
+        }
+    }
 }
 
 fn default_conf() -> conf::Conf {
