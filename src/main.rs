@@ -13,6 +13,7 @@ use ggez::graphics::Drawable;
 
 use std::time::Duration;
 use std::boxed::Box;
+use std::cmp::{min, max};
 
 mod ship;
 use ship::Ship;
@@ -44,10 +45,14 @@ fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
-    let negative_max = Color::RGBA(0, 0, 0, 255);
+    let black = Color::RGBA(0, 0, 0, 255);
+    let negative_max = Color::RGBA(128, 0, 0, 255);
     let positive_max = Color::RGBA(0, 0, 128, 255);
-
-    interp_between(val as f64, negative_max, positive_max)
+    if val < 0.0 {
+        interp_between(-val as f64, black, negative_max)
+    } else {
+        interp_between(val as f64, black, positive_max)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -84,13 +89,13 @@ struct Field(Vec<Vec<WaveType>>);
 impl Field {
     fn new() -> Self {
         let mut field = Vec::with_capacity(FIELD_WIDTH);
-        for i in 0..FIELD_WIDTH {
+        for _i in 0..FIELD_WIDTH {
             let mut bit = Vec::with_capacity(FIELD_HEIGHT);
             bit.resize(FIELD_HEIGHT, WaveType::default());
             field.push(bit);
         }
         let mut f = Field(field);
-        f.sprinkle_random_bits();
+        f.create_splash(100, 75, 5, 1.0);
         f
     }
 
@@ -153,24 +158,42 @@ impl Field {
                 let iy = y as i32;
 
                 val.position += val.velocity * dt;
-                // total force = restoring force plus  a force based on the
+                // total force = restoring force plus a force based on the
                 // sum of differences in position  between itself and its
                 // neighbors
-                // let forces = val.restoring_force() + self.relative_position(ix, iy, -1, -1) +
-                //              self.relative_position(ix, iy, 1, -1) +
-                //              self.relative_position(ix, iy, -1, 1) +
-                //              self.relative_position(ix, iy, 1, 1);
-                let forces = val.restoring_force() + self.relative_position(ix, iy, 0, -1) +
-                             self.relative_position(ix, iy, 0, 1) +
-                             self.relative_position(ix, iy, -1, 0) +
-                             self.relative_position(ix, iy, 1, 0) +
-                             self.relative_position(ix, iy, -1, -1) / sqrt2 +
-                             self.relative_position(ix, iy, 1, -1) / sqrt2 +
-                             self.relative_position(ix, iy, -1, 1) / sqrt2 +
-                             self.relative_position(ix, iy, 1, 1) / sqrt2;
+                // We can add divisors or multipliers based on the position
+                // to mess with the "speed of sound", kinda, or at least make
+                // anisotropic substances.  Sweet!
+                let neighbor_force = self.relative_position(ix, iy, 0, -1) +
+                                     self.relative_position(ix, iy, 0, 1) +
+                                     self.relative_position(ix, iy, -1, 0) +
+                                     self.relative_position(ix, iy, 1, 0) +
+                                     self.relative_position(ix, iy, -1, -1) / sqrt2 +
+                                     self.relative_position(ix, iy, 1, -1) / sqrt2 +
+                                     self.relative_position(ix, iy, -1, 1) / sqrt2 +
+                                     self.relative_position(ix, iy, 1, 1) / sqrt2;
+                let forces = val.restoring_force() + neighbor_force / 1.0;
                 val.velocity += forces;
                 // println!("{:?}", val);
                 self.0[x][y] = val;
+            }
+        }
+    }
+
+    // Creates a square disturbance in the field, setting all positions
+    // inside it to the given force.
+    // Eventually should add the values, not set them.
+    // Maybe should set velocity rather than position?
+    fn create_splash(&mut self, x: usize, y: usize, radius: usize, force: f32) {
+        let max_x = min(x + radius, FIELD_WIDTH);
+        let min_x = max(x - radius, 0);
+        let max_y = min(y + radius, FIELD_HEIGHT);
+        let min_y = max(y - radius, 0);
+        // println!("{}:{}, {}:{}", min_x, max_x, min_y, max_y);
+        for x in min_x..max_x {
+            for y in min_y..max_y {
+                // println!("Setting cell {},{} to force {}", x, y, force);
+                self.0[x][y].position = force;
             }
         }
     }
@@ -217,8 +240,8 @@ impl game::EventHandler for MainState {
         graphics::clear(ctx);
 
 
-        self.field.draw(ctx);
-        self.draw_ship(ctx);
+        self.field.draw(ctx)?;
+        self.draw_ship(ctx)?;
 
         ctx.renderer.present();
         Ok(())
@@ -242,5 +265,5 @@ fn main() {
     let mut ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
     let state = MainState::new(&mut ctx);
     let mut g = game::Game::from_state(ctx, state);
-    g.run();
+    g.run().unwrap();
 }
