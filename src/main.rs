@@ -20,8 +20,21 @@ mod ship;
 use ship::Ship;
 
 
+// SDL2 drawing on Windows appears to be *way*
+// slower than on Linux or Mac.  Ick.
+#[cfg(target_os = "windows")] 
+const FIELD_WIDTH: usize = 40;
+#[cfg(target_os = "windows")] 
+const FIELD_HEIGHT: usize = 30;
+#[cfg(target_os = "windows")] 
+const FIELD_CELL_SIZE: u32 = 20;
+
+
+#[cfg(not(target_os = "windows"))]
 const FIELD_WIDTH: usize = 200;
+#[cfg(not(target_os = "windows"))] 
 const FIELD_HEIGHT: usize = 150;
+#[cfg(not(target_os = "windows"))]
 const FIELD_CELL_SIZE: u32 = 4;
 
 // stolen from ggez-goodies particles; we really should have a general
