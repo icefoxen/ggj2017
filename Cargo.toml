@@ -7,3 +7,4 @@ authors = ["Simon Heath <icefoxen@gmail.com>"]
 ggez = { git = "https://github.com/ggez/ggez.git", branch = "gamestate-rework"}
 #ggez-goodies = { git = "https://github.com/ggez/ggez-goodies.git"}
 rand = "0.3"
+nalgebra = "0.10.*"

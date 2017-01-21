@@ -1,5 +1,6 @@
 extern crate ggez;
 extern crate rand;
+extern crate nalgebra as na;
 
 // extern crate ggez_goodies;
 
@@ -197,6 +198,8 @@ impl MainState {
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
         self.field.update();
+
+        self.ship.update();
         // println!("FPS: {}", ggez::timer::get_fps(ctx));
         Ok(())
     }
@@ -204,8 +207,10 @@ impl game::EventHandler for MainState {
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         graphics::clear(ctx);
 
-
+        // Background
         self.field.draw(ctx);
+
+        //Foreground
         self.draw_ship(ctx);
 
         ctx.renderer.present();
@@ -213,7 +218,6 @@ impl game::EventHandler for MainState {
     }
 
     fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        println!("Hi");
         self.ship.key_down_event(_keycode, _keymod, _repeat);
     }
 }
