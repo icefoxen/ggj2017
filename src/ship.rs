@@ -17,7 +17,7 @@ impl Ship {
         Ship {
             location: (start_x, start_y),
             scale: 1.0 as f32,
-            image: Image::new(ctx, "ship.png").unwrap()
+            image: Image::new(ctx, "ship.png").unwrap(),
         }
     }
 
@@ -28,21 +28,21 @@ impl Ship {
     }
 
     pub fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        let (x,y) = self.location;
+        let (x, y) = self.location;
         match _keycode {
             Keycode::W => {
                 self.location = (x, y + 1);
-            },
+            }
             Keycode::A => {
                 self.location = (x - 1, y);
-            },
+            }
             Keycode::S => {
                 self.location = (x, y - 1);
-            },
+            }
             Keycode::D => {
                 self.location = (x + 1, y);
-            },
-            _ => ()
+            }
+            _ => (),
         }
     }
 }

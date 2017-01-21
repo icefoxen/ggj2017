@@ -119,7 +119,7 @@ impl Field {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 // Decay intensity.
-                let val = self.0[x][y].position * 0.99;
+                let val = self.0[x][y].position * 0.95;
                 self.0[x][y].position = val;
             }
         }
@@ -145,6 +145,7 @@ impl Field {
 
     fn propegate(&mut self) {
         let dt = 0.01;
+        let sqrt2 = std::f32::consts::SQRT_2;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let mut val = self.0[x][y];
@@ -155,10 +156,18 @@ impl Field {
                 // total force = restoring force plus  a force based on the
                 // sum of differences in position  between itself and its
                 // neighbors
-                let forces = val.restoring_force() + self.relative_position(ix, iy, -1, -1) +
-                             self.relative_position(ix, iy, 1, -1) +
-                             self.relative_position(ix, iy, -1, 1) +
-                             self.relative_position(ix, iy, 1, 1);
+                // let forces = val.restoring_force() + self.relative_position(ix, iy, -1, -1) +
+                //              self.relative_position(ix, iy, 1, -1) +
+                //              self.relative_position(ix, iy, -1, 1) +
+                //              self.relative_position(ix, iy, 1, 1);
+                let forces = val.restoring_force() + self.relative_position(ix, iy, 0, -1) +
+                             self.relative_position(ix, iy, 0, 1) +
+                             self.relative_position(ix, iy, -1, 0) +
+                             self.relative_position(ix, iy, 1, 0) +
+                             self.relative_position(ix, iy, -1, -1) / sqrt2 +
+                             self.relative_position(ix, iy, 1, -1) / sqrt2 +
+                             self.relative_position(ix, iy, -1, 1) / sqrt2 +
+                             self.relative_position(ix, iy, 1, 1) / sqrt2;
                 val.velocity += forces;
                 // println!("{:?}", val);
                 self.0[x][y] = val;
@@ -178,13 +187,16 @@ impl Field {
 // The ndarray crate would be nice here.
 struct MainState {
     field: Field,
-    ship: Ship
+    ship: Ship,
 }
 
 impl MainState {
     fn new(ctx: &mut ggez::Context) -> Self {
         let f = Field::new();
-        MainState { field: f, ship: Ship::new(0 as i32, 0 as i32, ctx) }
+        MainState {
+            field: f,
+            ship: Ship::new(0 as i32, 0 as i32, ctx),
+        }
     }
 
     fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
