@@ -47,12 +47,9 @@ fn field_to_color(val: f32) -> Color {
 
 type WaveType = f32;
 
-// The ndarray crate would be nice here.
-struct MainState {
-    field: Vec<Vec<WaveType>>,
-}
+struct Field(Vec<Vec<f32>>);
 
-impl MainState {
+impl Field {
     fn new() -> Self {
         let mut field = Vec::with_capacity(FIELD_WIDTH);
         for i in 0..FIELD_WIDTH {
@@ -60,16 +57,16 @@ impl MainState {
             bit.resize(FIELD_HEIGHT, 0.5);
             field.push(bit);
         }
-        MainState { field: field }
+        Field(field)
     }
 
-    fn draw_field(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+    fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let xi = x as i32 * FIELD_CELL_SIZE as i32;
                 let yi = y as i32 * FIELD_CELL_SIZE as i32;
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
-                let color = field_to_color(self.field[x][y]);
+                let color = field_to_color(self.0[x][y]);
                 graphics::set_color(ctx, color);
                 graphics::rectangle(ctx, graphics::DrawMode::Fill, r)?;
             }
@@ -77,34 +74,49 @@ impl MainState {
         Ok(())
     }
 
-    fn update_field(&mut self) {
+    fn update(&mut self) {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 // Decay intensity.
-                let val = self.field[x][y] * 0.99;
-                self.field[x][y] = val;
+                let val = self.0[x][y] * 0.99;
+                self.0[x][y] = val;
             }
         }
         self.sprinkle_random_bits();
     }
 
+
+
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
         let ty = rand::random::<usize>() % FIELD_HEIGHT;
-        self.field[tx][ty] = 1.0;
+        self.0[tx][ty] = 1.0;
+    }
+}
+
+
+// The ndarray crate would be nice here.
+struct MainState {
+    field: Field,
+}
+
+impl MainState {
+    fn new() -> Self {
+        let f = Field::new();
+        MainState { field: f }
     }
 }
 
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
-        self.update_field();
+        self.field.update();
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         graphics::clear(ctx);
 
-        self.draw_field(ctx);
+        self.field.draw(ctx);
         ctx.renderer.present();
         Ok(())
     }
@@ -112,6 +124,7 @@ impl game::EventHandler for MainState {
 
 fn default_conf() -> conf::Conf {
     let mut c = conf::Conf::new();
+    c.window_title = String::from("wave-motion-gun");
     // c.window_width
     c
 }
