@@ -18,9 +18,9 @@ use std::cmp::{min, max};
 mod ship;
 use ship::Ship;
 
+
 const FIELD_WIDTH: usize = 200;
 const FIELD_HEIGHT: usize = 150;
-
 const FIELD_CELL_SIZE: u32 = 4;
 
 // stolen from ggez-goodies particles; we really should have a general
@@ -99,7 +99,7 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(100, 75, 5, -1.0);
+        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 5, -1.0);
         f
     }
 
@@ -129,11 +129,14 @@ impl Field {
         // Setting this to 0.98 makes the wave go forever,
         // setting it to 0.97 makes it just kind of go plonk.
         // At least with a surface tension of 3.0.
-        let decay_factor = 0.97;
+        let decay_factor = 0.999;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
-                let val = self.0[x][y].position * decay_factor;
-                self.0[x][y].position = val;
+                // let val = self.0[x][y].position * decay_factor;
+                // self.0[x][y].position = val;
+                // Decaying position vs. velocity doesn't seem
+                // to have made much difference
+                self.0[x][y].velocity *= decay_factor;
             }
         }
     }
@@ -161,7 +164,7 @@ impl Field {
         let sqrt2 = std::f32::consts::SQRT_2;
         // How strongly each cell is affected by its neighbors.
         // Higher numbers mean weaker.
-        let surface_tension = 3.0;
+        let surface_tension = 4.0;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let mut val = self.0[x][y];
@@ -169,7 +172,7 @@ impl Field {
                 let iy = y as i32;
 
                 val.position += val.velocity * dt;
-                val.position = clamp(val.position, -1.0, 1.0);
+                // val.position = clamp(val.position, -1.0, 1.0);
                 // total force = restoring force plus a force based on the
                 // sum of differences in position  between itself and its
                 // neighbors
@@ -186,6 +189,10 @@ impl Field {
                                      self.relative_position(ix, iy, 1, 1) / sqrt2;
                 let forces = val.restoring_force() + neighbor_force / surface_tension;
                 val.velocity += forces;
+                val.velocity = clamp(val.velocity, -1.0, 1.0);
+                if f32::abs(forces) > 1.0 {
+                    println!("forces: {}", forces);
+                }
                 // println!("{:?}", val);
                 self.0[x][y] = val;
             }
