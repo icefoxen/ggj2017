@@ -58,12 +58,12 @@ impl Ship {
             match *keycode {
                 Keycode::W | Keycode::Up => {
                     let mag = magnitude(&velocity) + 1.0;
-                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * bearing.rotation().x.cos());
+                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * -1.0 * bearing.rotation().x.cos());
                 },
                 Keycode::A | Keycode::Left => {
                     self.bearing.append_rotation_mut(&Vector1::new(-0.1));
                     let mag = magnitude(&velocity);
-                    self.velocity = Vector2::new(mag * bearing.rotation().x.sin(), mag * bearing.rotation().x.cos());
+                    self.velocity = Vector2::new(mag * -1.0 * bearing.rotation().x.sin(), mag * -1.0 * bearing.rotation().x.cos());
 
                 },
                 Keycode::S | Keycode::Down => (),
@@ -75,7 +75,7 @@ impl Ship {
                 _ => ()
             }
         }
-        println!("bearing: {:?} velocity: {:?}", bearing.rotation().x, velocity);
+        println!("bearing: {:?} velocity: {:?}", bearing.rotation().x.to_degrees(), velocity);
     }
 
     pub fn draw(&mut self, ctx: &mut Context) {

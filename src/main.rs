@@ -270,7 +270,7 @@ impl MainState {
         let f = Field::new();
         MainState {
             field: f,
-            ship: Ship::new(0 as i32, 0 as i32, ctx),
+            ship: Ship::new(100 as i32, 100 as i32, ctx),
             frame: 0,
         }
     }
