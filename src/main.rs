@@ -110,6 +110,15 @@ impl Field {
             let v = f32::sin(2.0 * std::f32::consts::PI * f * dt * t);
             self.0[1][i] = v;
         }
+
+
+        for j in 3..FIELD_WIDTH {
+            for i in 2..FIELD_HEIGHT - 1 {
+                let u1 = 2.0 * self.0[j - 1][i] - self.0[j - 2][i];
+                let u2 = self.0[j - 1][i - 1] - 2.0 * self.0[j - 1][i + 1];
+                self.0[j][i] = u1 + c * c * u2;
+            }
+        }
     }
 
     fn decay(&mut self) {
@@ -122,7 +131,13 @@ impl Field {
         }
     }
 
-    fn propegate(&mut self) {}
+    fn propegate(&mut self) {
+        for x in 0..FIELD_WIDTH {
+            for y in 0..FIELD_HEIGHT {
+
+            }
+        }
+    }
 
 
     fn sprinkle_random_bits(&mut self) {
