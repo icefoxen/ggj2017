@@ -57,7 +57,10 @@ impl Field {
             bit.resize(FIELD_HEIGHT, 0.5);
             field.push(bit);
         }
-        Field(field)
+
+        let mut f = Field(field);
+        f.initial_conditions();
+        f
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
@@ -75,6 +78,41 @@ impl Field {
     }
 
     fn update(&mut self) {
+        // self.sprinkle_random_bits();
+    }
+
+    // For now we copy off the matlab code at
+    //
+    // It's a one-dimensional simulation for now, let's
+    // using the x axis as time and the y axis as space.
+    fn initial_conditions(&mut self) {
+        // Number of timesteps
+        let t = FIELD_WIDTH as f32;
+        // frequency of source
+        let f = 100.0;
+        // wave velocity
+        let v = 100.0;
+        // time step
+        let dt = 0.01;
+        // CFL condition, v * (dt/dx), but dx is 1 (one cell) so.
+        let c = v * dt;
+        let s1 = f32::floor(t / f);
+
+        for i in 0..FIELD_HEIGHT {
+            let t = i as f32 * dt;
+            let v = f32::sin(2.0 * std::f32::consts::PI * f * dt * t);
+            self.0[0][i] = v;
+        }
+
+
+        for i in 0..FIELD_HEIGHT {
+            let t = i as f32 * dt;
+            let v = f32::sin(2.0 * std::f32::consts::PI * f * dt * t);
+            self.0[1][i] = v;
+        }
+    }
+
+    fn decay(&mut self) {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 // Decay intensity.
@@ -82,9 +120,9 @@ impl Field {
                 self.0[x][y] = val;
             }
         }
-        self.sprinkle_random_bits();
     }
 
+    fn propegate(&mut self) {}
 
 
     fn sprinkle_random_bits(&mut self) {
