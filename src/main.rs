@@ -8,9 +8,13 @@ use ggez::conf;
 use ggez::game;
 use ggez::graphics;
 use ggez::graphics::Color;
+use ggez::graphics::Drawable;
 
 use std::time::Duration;
 use std::boxed::Box;
+
+mod ship;
+use ship::Ship;
 
 const FIELD_WIDTH: usize = 200;
 const FIELD_HEIGHT: usize = 150;
@@ -50,17 +54,18 @@ type WaveType = f32;
 // The ndarray crate would be nice here.
 struct MainState {
     field: Vec<Vec<WaveType>>,
+    ship: Ship
 }
 
 impl MainState {
-    fn new() -> Self {
+    fn new(ctx: &mut ggez::Context) -> Self {
         let mut field = Vec::with_capacity(FIELD_WIDTH);
         for i in 0..FIELD_WIDTH {
             let mut bit = Vec::with_capacity(FIELD_HEIGHT);
             bit.resize(FIELD_HEIGHT, 0.5);
             field.push(bit);
         }
-        MainState { field: field }
+        MainState { field: field, ship: Ship::new(0 as i32, 0 as i32, ctx) }
     }
 
     fn draw_field(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
@@ -69,11 +74,19 @@ impl MainState {
                 let xi = x as i32 * FIELD_CELL_SIZE as i32;
                 let yi = y as i32 * FIELD_CELL_SIZE as i32;
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
+
                 let color = field_to_color(self.field[x][y]);
                 graphics::set_color(ctx, color);
                 graphics::rectangle(ctx, graphics::DrawMode::Fill, r)?;
             }
         }
+        Ok(())
+    }
+
+    fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+
+        self.ship.draw(ctx);
+
         Ok(())
     }
 
@@ -105,6 +118,8 @@ impl game::EventHandler for MainState {
         graphics::clear(ctx);
 
         self.draw_field(ctx);
+        self.draw_ship(ctx);
+
         ctx.renderer.present();
         Ok(())
     }
@@ -118,8 +133,8 @@ fn default_conf() -> conf::Conf {
 
 fn main() {
     let c = default_conf();
-    let state = MainState::new();
-    let ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
+    let mut ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
+    let state = MainState::new(&mut ctx);
     let mut g = game::Game::from_state(ctx, state);
     g.run();
 }
