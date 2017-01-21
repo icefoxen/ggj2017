@@ -1,6 +1,6 @@
 use ggez;
 use ggez::game;
-use ggez::event;
+use ggez::event::*;
 use ggez::Context;
 use ggez::graphics;
 use ggez::graphics::Image;
@@ -26,23 +26,23 @@ impl Ship {
 
         self.image.draw(ctx, None, Some(r));
     }
-}
 
-impl game::EventHandler for Ship {
-    fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
+    pub fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
+        let (x,y) = self.location;
         match _keycode {
-            W => {
-                self.location = (self.location.0, self.location.1 + 1);
+            Keycode::W => {
+                self.location = (x, y + 1);
             },
-            A => {
-                self.location = (self.location.0 - 1, self.location.1);
+            Keycode::A => {
+                self.location = (x - 1, y);
             },
-            S => {
-                self.location = (self.location.0, self.location.1 - 1);
+            Keycode::S => {
+                self.location = (x, y - 1);
             },
-            D => {
-                self.location = (self.location.0 + 1, self.location.1 - 1);
+            Keycode::D => {
+                self.location = (x + 1, y);
             },
+            _ => ()
         }
     }
 }

@@ -6,6 +6,7 @@ extern crate rand;
 use ggez::GameResult;
 use ggez::conf;
 use ggez::game;
+use ggez::event::*;
 use ggez::graphics;
 use ggez::graphics::Color;
 use ggez::graphics::Drawable;
@@ -49,33 +50,58 @@ fn field_to_color(val: f32) -> Color {
     interp_between(val as f64, negative_max, positive_max)
 }
 
-type WaveType = f32;
-
-// The ndarray crate would be nice here.
-struct MainState {
-    field: Vec<Vec<WaveType>>,
-    ship: Ship
+#[derive(Copy, Clone, Debug)]
+struct WaveType {
+    velocity: f32,
+    position: f32,
 }
 
-impl MainState {
-    fn new(ctx: &mut ggez::Context) -> Self {
+impl WaveType {
+    fn new(position: f32) -> Self {
+        WaveType {
+            velocity: 0.0,
+            position: position,
+        }
+    }
+
+    fn restoring_force(&self) -> f32 {
+        -self.position * 0.05
+        // 0.0
+    }
+}
+
+impl Default for WaveType {
+    fn default() -> Self {
+        WaveType {
+            velocity: 0.0,
+            position: 0.0,
+        }
+    }
+}
+
+struct Field(Vec<Vec<WaveType>>);
+
+impl Field {
+    fn new() -> Self {
         let mut field = Vec::with_capacity(FIELD_WIDTH);
         for i in 0..FIELD_WIDTH {
             let mut bit = Vec::with_capacity(FIELD_HEIGHT);
-            bit.resize(FIELD_HEIGHT, 0.5);
+            bit.resize(FIELD_HEIGHT, WaveType::default());
             field.push(bit);
         }
-        MainState { field: field, ship: Ship::new(0 as i32, 0 as i32, ctx) }
+        let mut f = Field(field);
+        f.sprinkle_random_bits();
+        f
     }
 
-    fn draw_field(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+    fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let xi = x as i32 * FIELD_CELL_SIZE as i32;
                 let yi = y as i32 * FIELD_CELL_SIZE as i32;
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
+                let color = field_to_color(self.0[x][y].position);
 
-                let color = field_to_color(self.field[x][y]);
                 graphics::set_color(ctx, color);
                 graphics::rectangle(ctx, graphics::DrawMode::Fill, r)?;
             }
@@ -83,50 +109,118 @@ impl MainState {
         Ok(())
     }
 
-    fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
-
-        self.ship.draw(ctx);
-
-        Ok(())
+    fn update(&mut self) {
+        // self.sprinkle_random_bits();
+        self.propegate();
+        self.decay();
     }
 
-    fn update_field(&mut self) {
+    fn decay(&mut self) {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 // Decay intensity.
-                let val = self.field[x][y] * 0.99;
-                self.field[x][y] = val;
+                let val = self.0[x][y].position * 0.99;
+                self.0[x][y].position = val;
             }
         }
-        self.sprinkle_random_bits();
     }
+
+    // This gets the difference between a poitn and one of its neighbors.
+    //
+    fn relative_position(&self, x: i32, y: i32, dx: i32, dy: i32) -> f32 {
+        let pos = self.0[x as usize][y as usize].position;
+        if x == 0 && dx < 0 {
+            0.0
+        } else if x == (FIELD_WIDTH as i32) - 1 && dx > 0 {
+            0.0
+        } else if y == 0 && dy < 0 {
+            0.0
+        } else if y == (FIELD_HEIGHT as i32) - 1 && dy > 0 {
+            0.0
+        } else {
+            self.0[(x + dx) as usize][(y + dy) as usize].position - pos
+
+        }
+    }
+
+    fn propegate(&mut self) {
+        let dt = 0.01;
+        for x in 0..FIELD_WIDTH {
+            for y in 0..FIELD_HEIGHT {
+                let mut val = self.0[x][y];
+                let ix = x as i32;
+                let iy = y as i32;
+
+                val.position += val.velocity * dt;
+                // total force = restoring force plus  a force based on the
+                // sum of differences in position  between itself and its
+                // neighbors
+                let forces = val.restoring_force() + self.relative_position(ix, iy, -1, -1) +
+                             self.relative_position(ix, iy, 1, -1) +
+                             self.relative_position(ix, iy, -1, 1) +
+                             self.relative_position(ix, iy, 1, 1);
+                val.velocity += forces;
+                // println!("{:?}", val);
+                self.0[x][y] = val;
+            }
+        }
+    }
+
 
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
         let ty = rand::random::<usize>() % FIELD_HEIGHT;
-        self.field[tx][ty] = 1.0;
+        self.0[tx][ty].position = 1.0;
+    }
+}
+
+
+// The ndarray crate would be nice here.
+struct MainState {
+    field: Field,
+    ship: Ship
+}
+
+impl MainState {
+    fn new(ctx: &mut ggez::Context) -> Self {
+        let f = Field::new();
+        MainState { field: f, ship: Ship::new(0 as i32, 0 as i32, ctx) }
+    }
+
+    fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+        self.ship.draw(ctx);
+
+        Ok(())
     }
 }
 
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
-        self.update_field();
+        self.field.update();
+        // println!("FPS: {}", ggez::timer::get_fps(ctx));
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         graphics::clear(ctx);
 
-        self.draw_field(ctx);
+
+        self.field.draw(ctx);
         self.draw_ship(ctx);
 
         ctx.renderer.present();
         Ok(())
     }
+
+    fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
+        println!("Hi");
+        self.ship.key_down_event(_keycode, _keymod, _repeat);
+    }
 }
 
 fn default_conf() -> conf::Conf {
     let mut c = conf::Conf::new();
+    c.window_title = String::from("wave-motion-gun");
     // c.window_width
     c
 }
