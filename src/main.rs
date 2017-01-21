@@ -262,6 +262,11 @@ impl Field {
         }
     }
 
+    pub fn read_strength(&self, x: i32, y: i32) -> f32 {
+        let x = x as u32 / FIELD_CELL_SIZE;
+        let y = y as u32 / FIELD_CELL_SIZE;
+        self.0[x as usize][y as usize].position
+    }
 
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
@@ -301,6 +306,10 @@ impl game::EventHandler for MainState {
         self.ship.update();
         // println!("FPS: {}", ggez::timer::get_fps(ctx));
 
+        // Shipwave
+        // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32, 
+        //    self.ship.location.y as i32));
+
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
 
@@ -330,6 +339,7 @@ impl game::EventHandler for MainState {
     }
 
     fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
+        println!("Mouse clicking at {}, {}", x, y);
         let x = x as u32 / FIELD_CELL_SIZE;
         let y = y as u32 / FIELD_CELL_SIZE;
         println!("Creating splash at {}, {}", x, y);
