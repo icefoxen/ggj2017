@@ -13,6 +13,7 @@ use ggez::graphics;
 use ggez::graphics::Color;
 use ggez::graphics::Drawable;
 
+use std::vec;
 use std::time::Duration;
 use std::boxed::Box;
 use std::cmp::{min, max};
@@ -32,11 +33,11 @@ const FIELD_CELL_SIZE: u32 = 20;
 
 
 #[cfg(not(target_os = "windows"))]
-const FIELD_WIDTH: usize = 200;
+const FIELD_WIDTH: usize = 40;
 #[cfg(not(target_os = "windows"))]
-const FIELD_HEIGHT: usize = 150;
+const FIELD_HEIGHT: usize = 30;
 #[cfg(not(target_os = "windows"))]
-const FIELD_CELL_SIZE: u32 = 4;
+const FIELD_CELL_SIZE: u32 = 20;
 
 fn screen_to_field_coords(x: u32, y: u32) -> (usize, usize) {
     let xn = (x / FIELD_CELL_SIZE) as usize;
@@ -103,13 +104,44 @@ fn field_to_color(val: f32) -> Color {
     }
 }
 
+struct WaveImages {
+    image: graphics::Image,
+    layers: Vec<graphics::Rect>
+}
+
+impl WaveImages {
+    fn new(ctx: &mut ggez::Context) -> Self {
+        let img = graphics::Image::new(ctx, "ocean_tiles.png").unwrap();
+        let layers = vec!(
+                graphics::Rect::new(128, 0, 128, 128),
+                graphics::Rect::new(0, 0, 128, 128),
+                graphics::Rect::new(128, 128, 128, 128),
+                graphics::Rect::new(0, 128, 128, 128),
+            );
+        WaveImages {
+            image: img,
+            layers: layers
+        }
+    }
+
+    fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
+        self.image.draw(ctx, Some(self.layers[0]), Some(rect));
+        if height > -0.4 {
+            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
+        }
+        if height > 0.2 {
+            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
+        }
+        if height > 0.9 {
+            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 struct WaveType {
     velocity: f32,
     position: f32,
-
-    image: Image,
-    layers: Vec<Rect>
 }
 
 impl WaveType {
@@ -156,15 +188,12 @@ impl Field {
         f
     }
 
-    fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+    fn draw(&mut self, ctx: &mut ggez::Context, waves: &mut WaveImages) -> GameResult<()> {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let (xi, yi) = field_to_screen_coords(x, y);
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
-                let color = field_to_color(self.0[x][y].position);
-
-                graphics::set_color(ctx, color);
-                graphics::rectangle(ctx, graphics::DrawMode::Fill, r)?;
+                let color = waves.draw_images(ctx, r, self.0[x][y].position);
             }
         }
         Ok(())
@@ -291,15 +320,18 @@ struct MainState {
     field: Field,
     ship: Ship,
     frame: usize,
+    wave_images: WaveImages,
 }
 
 impl MainState {
     fn new(ctx: &mut ggez::Context) -> Self {
         let f = Field::new();
+        let wi = WaveImages::new(ctx);
         MainState {
             field: f,
             ship: Ship::new(100 as i32, 100 as i32, ctx),
             frame: 0,
+            wave_images: wi,
         }
     }
 
@@ -338,7 +370,7 @@ impl game::EventHandler for MainState {
         graphics::clear(ctx);
 
         // Background
-        self.field.draw(ctx)?;
+        self.field.draw(ctx, &mut self.wave_images)?;
 
         // Foreground
         self.draw_ship(ctx)?;
