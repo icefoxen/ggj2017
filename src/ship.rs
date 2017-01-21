@@ -97,7 +97,7 @@ impl Ship {
         self.velocity += acceleration;
         self.velocity *= DRAG;
         self.location += velocity * speed as f32;
-        println!("bearing: {:?} velocity: {:?}", bearing, velocity);
+        // println!("bearing: {:?} velocity: {:?}", bearing, velocity);
     }
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {

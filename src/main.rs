@@ -5,6 +5,7 @@ extern crate nalgebra as na;
 // extern crate ggez_goodies;
 
 use ggez::GameResult;
+use ggez::audio;
 use ggez::conf;
 use ggez::game;
 use ggez::event::*;
@@ -316,7 +317,13 @@ impl game::EventHandler for MainState {
 
         self.field.update();
         self.ship.update();
-        // println!("FPS: {}", ggez::timer::get_fps(ctx));
+        if self.frame % 100 == 0 {
+            let time = ggez::timer::get_time_since_start(ctx).as_secs();
+            println!("Time {}s Frame {}, FPS: {}",
+                     time,
+                     self.frame,
+                     ggez::timer::get_fps(ctx));
+        }
 
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
@@ -373,7 +380,10 @@ fn default_conf() -> conf::Conf {
 fn main() {
     let c = default_conf();
     let mut ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
+    let m = audio::Music::new(&mut ctx, "Trance.ogg").unwrap();
+    audio::play_music(&mut ctx, &m).unwrap();
     let state = MainState::new(&mut ctx);
     let mut g = game::Game::from_state(ctx, state);
+
     g.run().unwrap();
 }
