@@ -41,13 +41,17 @@ fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
     Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
 }
 
+fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
+    f32::min(f32::max(val, lower), upper)
+}
+
 // Fields values are 0 to +1
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
     let black = Color::RGBA(0, 0, 0, 255);
-    let negative_max = Color::RGBA(128, 0, 0, 255);
-    let positive_max = Color::RGBA(0, 0, 128, 255);
+    let negative_max = Color::RGBA(255, 0, 0, 255);
+    let positive_max = Color::RGBA(0, 0, 255, 255);
     if val < 0.0 {
         interp_between(-val as f64, black, negative_max)
     } else {
@@ -95,7 +99,7 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(100, 75, 5, 1.0);
+        f.create_splash(100, 75, 5, -1.0);
         f
     }
 
@@ -121,10 +125,14 @@ impl Field {
     }
 
     fn decay(&mut self) {
+        // Decay intensity.
+        // Setting this to 0.98 makes the wave go forever,
+        // setting it to 0.97 makes it just kind of go plonk.
+        // At least with a surface tension of 3.0.
+        let decay_factor = 0.97;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
-                // Decay intensity.
-                let val = self.0[x][y].position * 0.95;
+                let val = self.0[x][y].position * decay_factor;
                 self.0[x][y].position = val;
             }
         }
@@ -151,6 +159,9 @@ impl Field {
     fn propegate(&mut self) {
         let dt = 0.01;
         let sqrt2 = std::f32::consts::SQRT_2;
+        // How strongly each cell is affected by its neighbors.
+        // Higher numbers mean weaker.
+        let surface_tension = 3.0;
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let mut val = self.0[x][y];
@@ -158,6 +169,7 @@ impl Field {
                 let iy = y as i32;
 
                 val.position += val.velocity * dt;
+                val.position = clamp(val.position, -1.0, 1.0);
                 // total force = restoring force plus a force based on the
                 // sum of differences in position  between itself and its
                 // neighbors
@@ -172,7 +184,7 @@ impl Field {
                                      self.relative_position(ix, iy, 1, -1) / sqrt2 +
                                      self.relative_position(ix, iy, -1, 1) / sqrt2 +
                                      self.relative_position(ix, iy, 1, 1) / sqrt2;
-                let forces = val.restoring_force() + neighbor_force / 1.0;
+                let forces = val.restoring_force() + neighbor_force / surface_tension;
                 val.velocity += forces;
                 // println!("{:?}", val);
                 self.0[x][y] = val;
