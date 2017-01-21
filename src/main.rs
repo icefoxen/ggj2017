@@ -19,6 +19,7 @@ use std::cmp::{min, max};
 
 mod ship;
 use ship::Ship;
+use ship::Buttons;
 
 
 // SDL2 drawing on Windows appears to be *way*
@@ -345,12 +346,23 @@ impl game::EventHandler for MainState {
     }
 
     fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        self.ship.key_down_event(_keycode);
+        match _keycode {
+            Keycode::W => self.ship.key_down_event(Buttons::Up),
+            Keycode::A => self.ship.key_down_event(Buttons::Left),
+            Keycode::D => self.ship.key_down_event(Buttons::Right),
+            _ => (),
+        }
+
     }
 
 
     fn key_up_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        self.ship.key_up_event(_keycode);
+        match _keycode {
+            Keycode::W => self.ship.key_up_event(Buttons::Up),
+            Keycode::A => self.ship.key_up_event(Buttons::Left),
+            Keycode::D => self.ship.key_up_event(Buttons::Right),
+            _ => (),
+        }
     }
 
     fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {

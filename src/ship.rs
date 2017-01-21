@@ -8,15 +8,20 @@ use ggez::graphics::Image;
 use ggez::graphics::Drawable;
 
 use na;
-use na::{Vector1, Vector2, Rotation2, Rotation, Rotate};
+use na::Vector2;
 
 use std::f32::consts;
-use std::time::Duration;
 use std::collections::HashSet;
 
 const DRAG: f32 = 0.97;
 const RAD_TO_DEGREES: f32 = 180.0 / consts::PI;
 
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum Buttons {
+    Up,
+    Left,
+    Right,
+}
 
 fn magnitude(vec: &Vector2<f32>) -> f32 {
     (vec.x.powi(2) + vec.y.powi(2)).sqrt()
@@ -33,7 +38,7 @@ pub struct Ship {
     keel_strength: f32,
     turning_speed: f32,
 
-    keys_down: HashSet<Keycode>,
+    keys_down: HashSet<Buttons>,
 }
 
 impl Ship {
@@ -53,7 +58,6 @@ impl Ship {
 
     pub fn update(&mut self) {
         let speed = self.speed;
-        let bearing = self.bearing;
         let velocity = self.velocity;
         let mut acceleration: Vector2<f32> = na::zero();
 
@@ -72,25 +76,21 @@ impl Ship {
         // let facing_vec_y = f32::sin(self.bearing);
         // acceleration += Vector2::new(facing_vec_x, facing_vec_y) * self.keel_strength;
 
-
-
         for keycode in &self.keys_down {
             match *keycode {
-                Keycode::W | Keycode::Up => {
+                Buttons::Up => {
                     let facing_vec_x = f32::cos(self.bearing - consts::PI / 2.0);
                     let facing_vec_y = f32::sin(self.bearing - consts::PI / 2.0);
                     let force = Vector2::new(facing_vec_x, facing_vec_y);
                     acceleration += force;
                 }
-                Keycode::A | Keycode::Left => {
+                Buttons::Left => {
                     self.bearing -= self.turning_speed;
 
                 }
-                Keycode::S | Keycode::Down => (),
-                Keycode::D | Keycode::Right => {
+                Buttons::Right => {
                     self.bearing += self.turning_speed;
                 }
-                _ => (),
             }
         }
 
@@ -117,11 +117,11 @@ impl Ship {
                      false)
     }
 
-    pub fn key_down_event(&mut self, _keycode: Keycode) {
-        self.keys_down.insert(_keycode);
+    pub fn key_down_event(&mut self, button: Buttons) {
+        self.keys_down.insert(button);
     }
 
-    pub fn key_up_event(&mut self, keycode: Keycode) {
-        self.keys_down.remove(&keycode);
+    pub fn key_up_event(&mut self, button: Buttons) {
+        self.keys_down.remove(&button);
     }
 }
