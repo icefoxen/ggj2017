@@ -126,11 +126,14 @@ impl Ship {
         println!("center: {:?}, {:?}", center.x, center.y);
     }
 
+
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let r = graphics::Rect::new(self.location.x as i32,
-                                    self.location.y as i32,
-                                    (128.0 * self.scale) as u32,
-                                    (128.0 * self.scale) as u32);
+        let size = 128.0;
+        let half_size = 64;
+        let r = graphics::Rect::new(self.location.x as i32 - half_size,
+                                    self.location.y as i32 - half_size,
+                                    (size * self.scale) as u32,
+                                    (size * self.scale) as u32);
         // let c = graphics::Point::new((0.0 * self.scale) as i32, 
         //                             (0.0 * self.scale) as i32);
 

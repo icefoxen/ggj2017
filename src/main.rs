@@ -5,6 +5,7 @@ extern crate nalgebra as na;
 // extern crate ggez_goodies;
 
 use ggez::GameResult;
+use ggez::audio;
 use ggez::conf;
 use ggez::game;
 use ggez::event::*;
@@ -36,6 +37,18 @@ const FIELD_WIDTH: usize = 200;
 const FIELD_HEIGHT: usize = 150;
 #[cfg(not(target_os = "windows"))]
 const FIELD_CELL_SIZE: u32 = 4;
+
+fn screen_to_field_coords(x: u32, y: u32) -> (usize, usize) {
+    let xn = (x / FIELD_CELL_SIZE) as usize;
+    let yn = (y / FIELD_CELL_SIZE) as usize;
+    (xn, yn)
+}
+
+fn field_to_screen_coords(x: usize, y: usize) -> (i32, i32) {
+    let xn = (x as u32) * FIELD_CELL_SIZE;
+    let yn = (y as u32) * FIELD_CELL_SIZE;
+    (xn as i32, yn as i32)
+}
 
 // stolen from ggez-goodies particles; we really should have a general
 // interpolation functionality there.  Does nalgebra or such have one?
@@ -143,8 +156,7 @@ impl Field {
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
-                let xi = x as i32 * FIELD_CELL_SIZE as i32;
-                let yi = y as i32 * FIELD_CELL_SIZE as i32;
+                let (xi, yi) = field_to_screen_coords(x, y);
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
                 let color = field_to_color(self.0[x][y].position);
 
@@ -298,13 +310,25 @@ impl MainState {
     }
 }
 
+
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
+
+        // Add a wake as the ship moves
+        let ship_field_location = screen_to_field_coords(self.ship.location.x as u32,
+                                                         self.ship.location.y as u32);
+        let (sx, sy) = ship_field_location;
+        self.field.create_splash(sx, sy, 4, -1.0);
+
         self.field.update();
-
-
         self.ship.update();
-        // println!("FPS: {}", ggez::timer::get_fps(ctx));
+        if self.frame % 100 == 0 {
+            let time = ggez::timer::get_time_since_start(ctx).as_secs();
+            println!("Time {}s Frame {}, FPS: {}",
+                     time,
+                     self.frame,
+                     ggez::timer::get_fps(ctx));
+        }
 
         // Shipwave
         // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32, 
@@ -366,7 +390,10 @@ fn default_conf() -> conf::Conf {
 fn main() {
     let c = default_conf();
     let mut ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
+    let m = audio::Music::new(&mut ctx, "Trance.ogg").unwrap();
+    audio::play_music(&mut ctx, &m).unwrap();
     let state = MainState::new(&mut ctx);
     let mut g = game::Game::from_state(ctx, state);
+
     g.run().unwrap();
 }
