@@ -41,6 +41,23 @@ fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
     Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
 }
 
+fn interp_between_square(t: f64, v1: Color, v2: Color) -> Color {
+
+    let (r1, g1, b1, a1) = v1.rgba();
+    let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
+
+    let (r2, g2, b2, a2) = v2.rgba();
+
+    let dr = (r2 - r1) as f64;
+    let dg = (g2 - g1) as f64;
+    let db = (b2 - b1) as f64;
+    let da = (a2 - a1) as f64;
+
+    let t2 = f64::sqrt(t);
+    let (rr, rg, rb, ra) = (fr1 + dr * t2, fg1 + dg * t2, fb1 + db * t2, fa1 + da * t2);
+    Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
+}
+
 fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
     f32::min(f32::max(val, lower), upper)
 }
@@ -53,9 +70,9 @@ fn field_to_color(val: f32) -> Color {
     let negative_max = Color::RGBA(255, 0, 0, 255);
     let positive_max = Color::RGBA(0, 0, 255, 255);
     if val < 0.0 {
-        interp_between(-val as f64, black, negative_max)
+        interp_between_square(-val as f64, black, negative_max)
     } else {
-        interp_between(val as f64, black, positive_max)
+        interp_between_square(val as f64, black, positive_max)
     }
 }
 
@@ -81,9 +98,14 @@ impl WaveType {
 
 impl Default for WaveType {
     fn default() -> Self {
+        // If you make these 0 the optimizer/OS won't
+        // actually allocate space for the arrays it needs
+        // until the game is running, I suspect.
+        // So it gets laggy for the first few seconds.
+        // With a slight offset it APPEARS to MOSTLY fix the problem.
         WaveType {
-            velocity: 0.0,
-            position: 0.0,
+            velocity: 0.001,
+            position: 0.001,
         }
     }
 }
@@ -138,6 +160,15 @@ impl Field {
                 // Decaying position vs. velocity doesn't seem
                 // to have made much difference
                 self.0[x][y].velocity *= decay_factor;
+                self.0[x][y].position *= decay_factor;
+
+                // We might just want to zero this out if it goes below a certain point.
+                // if f32::abs(self.0[x][y].velocity) < 0.001 {
+                //     self.0[x][y].velocity = 0.0;
+                // }
+                // if f32::abs(self.0[x][y].position) < 0.001 {
+                //     self.0[x][y].position = 0.0;
+                // }
             }
         }
     }
