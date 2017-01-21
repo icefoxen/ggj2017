@@ -107,6 +107,9 @@ fn field_to_color(val: f32) -> Color {
 struct WaveType {
     velocity: f32,
     position: f32,
+
+    image: Image,
+    layers: Vec<Rect>
 }
 
 impl WaveType {
