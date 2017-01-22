@@ -563,9 +563,52 @@ fn default_conf() -> conf::Conf {
     c
 }
 
+struct TitleScreen {
+    image: graphics::Image,
+    done: bool,
+}
+
+impl TitleScreen {
+    fn new(ctx: &mut ggez::Context) -> Self {
+        TitleScreen {
+            image: graphics::Image::new(ctx, "title.png").unwrap(),
+            done: false,
+        }
+    }
+}
+
+impl game::EventHandler for TitleScreen {
+    fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
+        if self.done {
+            ctx.quit();
+        }
+        Ok(())
+    }
+
+    fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+        graphics::clear(ctx);
+
+        self.image.draw(ctx, None, None)?;
+
+        ctx.renderer.present();
+        Ok(())
+    }
+
+
+    fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
+        // End this gameloop and move on to the next.
+        self.done = true;
+    }
+}
+
 fn main() {
     let c = default_conf();
     let mut ctx = ggez::Context::load_from_conf("Flipwrecked", c).unwrap();
+
+    let titlescreen = TitleScreen::new(&mut ctx);
+    let g = game::Game::from_state(ctx, titlescreen);
+    let mut ctx = g.run().unwrap();
+
     let m = audio::Music::new(&mut ctx, "Trance.ogg").unwrap();
     audio::play_music(&mut ctx, &m).unwrap();
     let state = MainState::new(&mut ctx);
