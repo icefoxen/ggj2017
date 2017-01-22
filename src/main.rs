@@ -354,6 +354,7 @@ struct MainState {
     wave_images: WaveImages,
     player1_wins_image: graphics::Image,
     player2_wins_image: graphics::Image,
+    nobody_wins_image: graphics::Image,
     reset: bool,
 }
 
@@ -363,6 +364,7 @@ impl MainState {
         let wi = WaveImages::new(ctx);
         let player1_wins_image = graphics::Image::new(ctx, "ship1_wins.png").unwrap();
         let player2_wins_image = graphics::Image::new(ctx, "ship2_wins.png").unwrap();
+        let nobody_wins_image = graphics::Image::new(ctx, "nobody_wins.png").unwrap();
         MainState {
             field: f,
             player1: Ship::new(100 as i32, 100 as i32, ctx, "ship1"),
@@ -371,6 +373,7 @@ impl MainState {
             wave_images: wi,
             player1_wins_image: player1_wins_image,
             player2_wins_image: player2_wins_image,
+            nobody_wins_image: nobody_wins_image,
             reset: false,
         }
     }
@@ -482,6 +485,8 @@ impl game::EventHandler for MainState {
             self.player2_wins_image.draw(ctx, None, None)?;
         } else if self.player2.flipped {
             self.player1_wins_image.draw(ctx, None, None)?;
+        } else if self.player1.flipped && self.player2.flipped {
+            self.nobody_wins_image.draw(ctx, None, None)?;
         }
 
         ctx.renderer.present();
