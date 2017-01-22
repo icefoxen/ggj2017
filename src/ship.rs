@@ -15,6 +15,7 @@ use std::collections::HashSet;
 
 const DRAG: f32 = 0.97;
 const RAD_TO_DEGREES: f32 = 180.0 / consts::PI;
+const FLIPPING_TIMEOUT: u32 = 10;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum Buttons {
@@ -47,6 +48,9 @@ pub struct Ship {
     pub angular_velocity: f32,
     pub image: Image,
 
+    angle_image: Image,
+    sideways_image: Image,
+
     scale: f32,
     bearing: f32,
     speed: f32,
@@ -58,6 +62,7 @@ pub struct Ship {
     pub jumping: bool,
     pub post_jump: usize,
     pub flipped: bool,
+    flipping: u32,
 
     keys_down: HashSet<Buttons>,
 }
@@ -69,8 +74,13 @@ impl Ship {
             velocity: Vector2::new(0.0, 0.0),
             angular_velocity: 0.0,
             scale: 1.0,
-            image: Image::new(ctx, filename).unwrap(),
+
             speed: 0.1,
+
+            image: Image::new(ctx, format!("{}.png", filename)).unwrap(),
+            angle_image: Image::new(ctx, format!("{}_tipping.png", filename)).unwrap(),
+            sideways_image: Image::new(ctx, format!("{}_sideways.png", filename)).unwrap(),
+
             turning_torque: 0.001,
             bearing: 0.0,
             length: 128.0,
@@ -80,6 +90,7 @@ impl Ship {
             jump_index: 0,
             post_jump: 0,
             flipped: false,
+            flipping: 0,
 
             keys_down: HashSet::new(),
         }
@@ -159,6 +170,13 @@ impl Ship {
             }
         }
 
+        if self.flipping > 0 {
+            self.flipping += 1;
+            if self.flipping == FLIPPING_TIMEOUT {
+                self.flipped = true;
+            }
+        }
+
         self.velocity += acceleration;
         self.velocity *= DRAG;
         self.location += velocity * speed as f32;
@@ -193,14 +211,35 @@ impl Ship {
         // let c = graphics::Point::new((0.0 * self.scale) as i32,
         //                             (0.0 * self.scale) as i32);
 
-        self.image
-            .draw_ex(ctx,
+        if self.flipping > 0 && self.flipping < FLIPPING_TIMEOUT {
+            self.angle_image.draw_ex(ctx,
                      None,
                      Some(r),
                      (self.bearing * RAD_TO_DEGREES) as f64,
                      None,
                      false,
-                     false)
+                     false);
+        }
+        if self.flipped {
+            self.sideways_image.draw_ex(ctx,
+                     None,
+                     Some(r),
+                     (self.bearing * RAD_TO_DEGREES) as f64,
+                     None,
+                     false,
+                     false);
+        }
+        else {
+            self.image.draw_ex(ctx,
+                     None,
+                     Some(r),
+                     (self.bearing * RAD_TO_DEGREES) as f64,
+                     None,
+                     false,
+                     false);
+        }
+
+        Ok(())
     }
 
     pub fn key_down_event(&mut self, button: Buttons) {
@@ -212,7 +251,7 @@ impl Ship {
     }
 
     pub fn flip(&mut self) {
-        self.flipped = true;
+        self.flipping = 1;
         println!("Flipped!");
     }
 }

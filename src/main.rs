@@ -358,8 +358,8 @@ impl MainState {
         let wi = WaveImages::new(ctx);
         MainState {
             field: f,
-            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship.png"),
-            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2.png"),
+            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship1"),
+            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2"),
             frame: 0,
             wave_images: wi,
         }
