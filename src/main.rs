@@ -33,11 +33,11 @@ const FIELD_CELL_SIZE: u32 = 20;
 
 
 #[cfg(not(target_os = "windows"))]
-const FIELD_WIDTH: usize = 40;
+const FIELD_WIDTH: usize = 80;
 #[cfg(not(target_os = "windows"))]
-const FIELD_HEIGHT: usize = 30;
+const FIELD_HEIGHT: usize = 60;
 #[cfg(not(target_os = "windows"))]
-const FIELD_CELL_SIZE: u32 = 20;
+const FIELD_CELL_SIZE: u32 = 10;
 
 fn screen_to_field_coords(x: u32, y: u32) -> (usize, usize) {
     let xn = (x / FIELD_CELL_SIZE) as usize;
