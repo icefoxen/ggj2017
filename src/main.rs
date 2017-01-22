@@ -149,8 +149,8 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
-        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
+        // f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
+        // f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
         f
     }
 
@@ -269,6 +269,8 @@ impl Field {
         for x in min_x..max_x {
             for y in min_y..max_y {
                 // println!("Setting cell {},{} to force {}", x, y, force);
+                // Setting position vs. velocity doesn't appear to make
+                // much difference.
                 self.0[x][y].position = force;
                 // self.0[x][y].velocity += force;
             }
@@ -287,7 +289,8 @@ impl Field {
 // The ndarray crate would be nice here.
 struct MainState {
     field: Field,
-    ship: Ship,
+    player1: Ship,
+    player2: Ship,
     frame: usize,
 }
 
@@ -296,13 +299,10 @@ impl MainState {
         let f = Field::new();
         MainState {
             field: f,
-            ship: Ship::new(100 as i32, 100 as i32, ctx),
+            player1: Ship::new(100 as i32, 100 as i32, ctx),
+            player2: Ship::new(600 as i32, 400 as i32, ctx),
             frame: 0,
         }
-    }
-
-    fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
-        self.ship.draw(ctx)
     }
 }
 
@@ -311,13 +311,21 @@ impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
 
         // Add a wake as the ship moves
-        let ship_field_location = screen_to_field_coords(self.ship.location.x as u32,
-                                                         self.ship.location.y as u32);
-        let (sx, sy) = ship_field_location;
+        let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
+                                                       self.player1.location.y as u32);
+        let (sx, sy) = p1_field_location;
         self.field.create_splash(sx, sy, 4, -1.0);
 
+
+        let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
+                                                       self.player2.location.y as u32);
+        let (sx, sy) = p2_field_location;
+        self.field.create_splash(sx, sy, 4, 1.0);
+
         self.field.update();
-        self.ship.update();
+        self.player1.update();
+        self.player2.update();
+
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
             println!("Time {}s Frame {}, FPS: {}",
@@ -339,7 +347,8 @@ impl game::EventHandler for MainState {
         self.field.draw(ctx)?;
 
         // Foreground
-        self.draw_ship(ctx)?;
+        self.player1.draw(ctx)?;
+        self.player2.draw(ctx)?;
 
         ctx.renderer.present();
         Ok(())
@@ -347,9 +356,13 @@ impl game::EventHandler for MainState {
 
     fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match _keycode {
-            Keycode::W => self.ship.key_down_event(Buttons::Up),
-            Keycode::A => self.ship.key_down_event(Buttons::Left),
-            Keycode::D => self.ship.key_down_event(Buttons::Right),
+            Keycode::W => self.player1.key_down_event(Buttons::Up),
+            Keycode::A => self.player1.key_down_event(Buttons::Left),
+            Keycode::D => self.player1.key_down_event(Buttons::Right),
+
+            Keycode::I => self.player2.key_down_event(Buttons::Up),
+            Keycode::J => self.player2.key_down_event(Buttons::Left),
+            Keycode::L => self.player2.key_down_event(Buttons::Right),
             _ => (),
         }
 
@@ -358,26 +371,63 @@ impl game::EventHandler for MainState {
 
     fn key_up_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
         match _keycode {
-            Keycode::W => self.ship.key_up_event(Buttons::Up),
-            Keycode::A => self.ship.key_up_event(Buttons::Left),
-            Keycode::D => self.ship.key_up_event(Buttons::Right),
+            Keycode::W => self.player1.key_up_event(Buttons::Up),
+            Keycode::A => self.player1.key_up_event(Buttons::Left),
+            Keycode::D => self.player1.key_up_event(Buttons::Right),
+
+            Keycode::I => self.player2.key_up_event(Buttons::Up),
+            Keycode::J => self.player2.key_up_event(Buttons::Left),
+            Keycode::L => self.player2.key_up_event(Buttons::Right),
             _ => (),
         }
     }
 
-    fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
-        let x = x as u32 / FIELD_CELL_SIZE;
-        let y = y as u32 / FIELD_CELL_SIZE;
-        println!("Creating splash at {}, {}", x, y);
+    fn mouse_button_down_event(&mut self, button: MouseButton, _x: i32, _y: i32) {
+        //     let x = x as u32 / FIELD_CELL_SIZE;
+        //     let y = y as u32 / FIELD_CELL_SIZE;
+        //     println!("Creating splash at {}, {}", x, y);
         match button {
             MouseButton::Left => {
-                self.field.create_splash(x as usize, y as usize, 3, 1.0);
+                self.player2.key_down_event(Buttons::Up);
             }
-
-            MouseButton::Right => {
-                self.field.create_splash(x as usize, y as usize, 3, -1.0);
-            }
+            // MouseButton::Left => {
+            //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+            // }
+            //
+            // MouseButton::Right => {
+            //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+            // }
             _ => (),
+        }
+    }
+
+    fn mouse_button_up_event(&mut self, button: MouseButton, _x: i32, _y: i32) {
+        //     let x = x as u32 / FIELD_CELL_SIZE;
+        //     let y = y as u32 / FIELD_CELL_SIZE;
+        //     println!("Creating splash at {}, {}", x, y);
+        match button {
+            MouseButton::Left => {
+                self.player2.key_up_event(Buttons::Up);
+            }
+            // MouseButton::Left => {
+            //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+            // }
+            //
+            // MouseButton::Right => {
+            //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+            // }
+            _ => (),
+        }
+    }
+
+    fn mouse_motion_event(&mut self, _state: MouseState, _x: i32, _y: i32, xrel: i32, _yrel: i32) {
+        if xrel < 0 {
+            self.player2.key_up_event(Buttons::Right);
+            self.player2.key_down_event(Buttons::Left);
+        } else {
+            self.player2.key_up_event(Buttons::Left);
+            self.player2.key_down_event(Buttons::Right);
+
         }
     }
 }
