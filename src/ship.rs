@@ -21,6 +21,7 @@ pub enum Buttons {
     Up,
     Left,
     Right,
+    Jump,
 }
 const SHIP_SIZE: f32 = 128.0;
 
@@ -34,6 +35,11 @@ fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
 
 fn magnitude(vec: &Vector2<f32>) -> f32 {
     (vec.x.powi(2) + vec.y.powi(2)).sqrt()
+}
+
+fn calculate_jump_scale(index: usize) -> f32 {
+    let data = vec!(1.0, 0.9, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0);
+    data[0]
 }
 
 pub struct Ship {
@@ -51,18 +57,20 @@ pub struct Ship {
     length: f32,
     width: f32,
     collider_radius: f32,
+    jumping: bool,
+    jump_index: usize,
 
     keys_down: HashSet<Buttons>,
 }
 
 impl Ship {
-    pub fn new(start_x: i32, start_y: i32, ctx: &mut Context) -> Self {
+    pub fn new(start_x: i32, start_y: i32, ctx: &mut Context, filename: &str) -> Self {
         Ship {
             location: Vector2::new(start_x as f32, start_y as f32),
             velocity: Vector2::new(0.0, 0.0),
             angular_velocity: 0.0,
             scale: 1.0,
-            image: Image::new(ctx, "ship.png").unwrap(),
+            image: Image::new(ctx, filename).unwrap(),
             speed: 0.2,
             keel_strength: 0.1,
             turning_speed: 0.03,
@@ -71,6 +79,8 @@ impl Ship {
             length: 128.0,
             width: 128.0,
             collider_radius: 64.0 * 1.414,
+            jumping: false,
+            jump_index: 0,
 
             keys_down: HashSet::new(),
         }
@@ -117,6 +127,28 @@ impl Ship {
                     // self.bearing += self.turning_speed;
                     torque += self.turning_torque;
                 }
+                Buttons::Jump => {
+                    println!("JUMP");
+                    self.jumping = true;
+                }
+            }
+        }
+
+        if !self.keys_down.contains(&Buttons::Jump) {
+            println!("NOT JUMP");
+            self.jumping = false;
+        }
+
+        if self.jumping {
+            self.scale = calculate_jump_scale(self.jump_index);
+            self.jump_index = (self.jump_index + 1);
+
+            if(self.jump_index == 11) {
+                self.scale = 1.0;
+                self.jump_index = 0;
+                self.jumping = false;
+
+                // Splash here!
             }
         }
 
@@ -135,12 +167,12 @@ impl Ship {
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
-        println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
-        println!("location: {:?}, {:?}", self.location.x, self.location.y);
-        println!("center: {:?}, {:?}, radius: {:?}",
-                 center.x,
-                 center.y,
-                 self.collider_radius);
+        //println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
+        //println!("location: {:?}, {:?}", self.location.x, self.location.y);
+        //println!("center: {:?}, {:?}, radius: {:?}",
+        //         center.x,
+        //         center.y,
+        //         self.collider_radius);
     }
 
 
