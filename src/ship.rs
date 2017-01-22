@@ -70,7 +70,7 @@ impl Ship {
             angular_velocity: 0.0,
             scale: 1.0,
             image: Image::new(ctx, filename).unwrap(),
-            speed: 0.2,
+            speed: 0.1,
             turning_torque: 0.001,
             bearing: 0.0,
             length: 128.0,
