@@ -57,7 +57,7 @@ pub struct Ship {
     length: f32,
     width: f32,
     collider_radius: f32,
-    is_speed_large: bool,
+    velocity_mag: f32,
     jumping: bool,
     jump_index: usize,
 
@@ -80,7 +80,7 @@ impl Ship {
             length: 128.0,
             width: 128.0,
             collider_radius: 64.0 * 1.414,
-            is_speed_large: false,
+            velocity_mag: 0.0,
             jumping: false,
             jump_index: 0,
 
@@ -92,6 +92,7 @@ impl Ship {
         let speed = self.speed;
         let velocity = self.velocity;
         let v_mag = magnitude(&velocity);
+        self.velocity_mag = v_mag;
         let mut acceleration: Vector2<f32> = na::zero();
         let mut torque: f32 = 0.0;
         let center: Vector2<f32> = self.location +
@@ -113,12 +114,6 @@ impl Ship {
         // acceleration += Vector2::new(facing_vec_x, facing_vec_y) * self.keel_strength;
         //
         // Trying to add torque
-
-        if v_mag > 0.2 {
-            self.is_speed_large = true;
-        } else {
-            self.is_speed_large = false;
-        }
 
 
         for keycode in &self.keys_down {
@@ -214,7 +209,7 @@ impl Ship {
         self.keys_down.remove(&button);
     }
 
-    pub fn can_make_splash(&self) -> bool {
-        self.is_speed_large
+    pub fn get_speed(&self) -> f32 {
+        self.velocity_mag
     }
 }

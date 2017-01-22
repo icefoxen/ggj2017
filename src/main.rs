@@ -294,6 +294,7 @@ impl Field {
     // Eventually should add the values, not set them.
     // Maybe should set velocity rather than position?
     fn create_splash(&mut self, x: usize, y: usize, radius: usize, force: f32) {
+        let radius = radius / FIELD_CELL_SIZE as usize;
         let max_x = min(x + radius, FIELD_WIDTH);
         let min_x = max(x - radius, 0);
         let max_y = min(y + radius, FIELD_HEIGHT);
@@ -304,8 +305,8 @@ impl Field {
                 // println!("Setting cell {},{} to force {}", x, y, force);
                 // Setting position vs. velocity doesn't appear to make
                 // much difference.
-                self.0[x][y].position = force;
-                // self.0[x][y].velocity += force;
+                // self.0[x][y].position = force;
+                self.0[x][y].velocity += force;
             }
         }
     }
@@ -356,19 +357,16 @@ impl game::EventHandler for MainState {
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
                                                        self.player1.location.y as u32);
         let (sx, sy) = p1_field_location;
-        if self.player1.can_make_splash()
-        {
-            self.field.create_splash(sx, sy, 4, -1.0);
-        }
+        let max_speed = 25.0;
+        let spd = self.player1.get_speed();
+        println!("{:?}", spd);
+        self.field.create_splash(sx, sy, (40.0 * self.player1.get_speed() / max_speed) as usize, -1.0);
 
 
         let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
                                                        self.player2.location.y as u32);
         let (sx, sy) = p2_field_location;
-        if self.player2.can_make_splash()
-        {
-            self.field.create_splash(sx, sy, 4, 1.0);
-        }
+        self.field.create_splash(sx, sy, (40.0 * self.player2.get_speed() / max_speed) as usize, 1.0);
 
         self.field.update();
         self.player1.update();
