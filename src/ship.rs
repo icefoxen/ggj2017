@@ -21,6 +21,7 @@ pub enum Buttons {
     Up,
     Left,
     Right,
+    Jump,
 }
 const SHIP_SIZE: f32 = 128.0;
 
@@ -52,18 +53,19 @@ pub struct Ship {
     width: f32,
     collider_radius: f32,
     is_speed_large: bool,
+    jumping: bool,
 
     keys_down: HashSet<Buttons>,
 }
 
 impl Ship {
-    pub fn new(start_x: i32, start_y: i32, ctx: &mut Context) -> Self {
+    pub fn new(start_x: i32, start_y: i32, ctx: &mut Context, filename: &str) -> Self {
         Ship {
             location: Vector2::new(start_x as f32, start_y as f32),
             velocity: Vector2::new(0.0, 0.0),
             angular_velocity: 0.0,
             scale: 1.0,
-            image: Image::new(ctx, "ship.png").unwrap(),
+            image: Image::new(ctx, filename).unwrap(),
             speed: 0.2,
             keel_strength: 0.1,
             turning_speed: 0.03,
@@ -73,6 +75,7 @@ impl Ship {
             width: 128.0,
             collider_radius: 64.0 * 1.414,
             is_speed_large: false,
+            jumping: false,
 
             keys_down: HashSet::new(),
         }
@@ -127,7 +130,14 @@ impl Ship {
                     // self.bearing += self.turning_speed;
                     torque += self.turning_torque;
                 }
+                Buttons::Jump => {
+                    self.jumping = true
+                }
             }
+        }
+
+        if self.keys_down.contains(&Buttons::Jump) {
+
         }
 
         self.velocity += acceleration;
