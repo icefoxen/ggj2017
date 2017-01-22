@@ -52,7 +52,7 @@ pub struct Ship {
     sideways_image: Image,
 
     scale: f32,
-    bearing: f32,
+    pub bearing: f32,
     speed: f32,
     turning_torque: f32,
     length: f32,

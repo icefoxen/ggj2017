@@ -141,8 +141,10 @@ impl WaveType {
     }
 
     fn restoring_force(&self) -> f32 {
+        // Position is correct but maybe
+        // velocity plays better?
         -self.position * 0.05
-        // 0.0
+        //-self.velocity * 0.002
     }
 }
 
@@ -365,12 +367,15 @@ impl MainState {
         let player1_wins_image = graphics::Image::new(ctx, "ship1_wins.png").unwrap();
         let player2_wins_image = graphics::Image::new(ctx, "ship2_wins.png").unwrap();
         let nobody_wins_image = graphics::Image::new(ctx, "nobody_wins.png").unwrap();
+        let mut player1 = Ship::new(100 as i32, 100 as i32, ctx, "ship1");
+        player1.bearing = 3.14159;
+        let player2 = Ship::new(600 as i32, 400 as i32, ctx, "ship2");
         MainState {
             field: f,
-            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship1"),
-            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2"),
             frame: 0,
             wave_images: wi,
+            player1: player1,
+            player2: player2,
             player1_wins_image: player1_wins_image,
             player2_wins_image: player2_wins_image,
             nobody_wins_image: nobody_wins_image,
@@ -381,6 +386,7 @@ impl MainState {
     fn reset(&mut self, ctx: &mut ggez::Context) {
         self.field = Field::new();
         self.player1 = Ship::new(100 as i32, 100 as i32, ctx, "ship1");
+        self.player1.bearing = 3.14159;
         self.player2 = Ship::new(600 as i32, 400 as i32, ctx, "ship2");
         self.reset = false;
     }
@@ -435,6 +441,7 @@ impl game::EventHandler for MainState {
         self.field.update();
         self.player1.update();
         self.player2.update();
+        self.calculate_flips();
 
         if self.player1.post_jump == 30 {
             // create splash from landing
@@ -463,7 +470,6 @@ impl game::EventHandler for MainState {
         // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32,
         //    self.ship.location.y as i32));
 
-        self.calculate_flips();
 
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
@@ -481,12 +487,12 @@ impl game::EventHandler for MainState {
         self.player1.draw(ctx)?;
         self.player2.draw(ctx)?;
 
-        if self.player1.flipped {
+        if self.player1.flipped && self.player2.flipped {
+            self.nobody_wins_image.draw(ctx, None, None)?;
+        } else if self.player1.flipped {
             self.player2_wins_image.draw(ctx, None, None)?;
         } else if self.player2.flipped {
             self.player1_wins_image.draw(ctx, None, None)?;
-        } else if self.player1.flipped && self.player2.flipped {
-            self.nobody_wins_image.draw(ctx, None, None)?;
         }
 
         ctx.renderer.present();
