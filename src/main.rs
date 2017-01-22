@@ -76,11 +76,12 @@ fn interp_between_square(t: f64, v1: Color, v2: Color) -> Color {
     let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
 
     let (r2, g2, b2, a2) = v2.rgba();
+    let (fr2, fg2, fb2, fa2) = (r2 as f64, g2 as f64, b2 as f64, a2 as f64);
 
-    let dr = (r2 - r1) as f64;
-    let dg = (g2 - g1) as f64;
-    let db = (b2 - b1) as f64;
-    let da = (a2 - a1) as f64;
+    let dr = fr2 - fr1;
+    let dg = fg2 - fg1;
+    let db = fb2 - fb1;
+    let da = fa2 - fa1;
 
     let t2 = f64::sqrt(t);
     let (rr, rg, rb, ra) = (fr1 + dr * t2, fg1 + dg * t2, fb1 + db * t2, fa1 + da * t2);
@@ -95,9 +96,9 @@ fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
-    let black = Color::RGBA(255, 255, 255, 255);
-    let negative_max = Color::RGBA(255, 128, 128, 255);
-    let positive_max = Color::RGBA(128, 128, 255, 255);
+    let black = Color::RGBA(0, 120, 255, 255);
+    let negative_max = Color::RGBA(0, 70, 128, 255);
+    let positive_max = Color::RGBA(150, 200, 255, 255);
     if val < 0.0 {
         interp_between_square(-val as f64, black, negative_max)
     } else {
@@ -124,13 +125,13 @@ impl WaveImages {
     }
 
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
-        let c = field_to_color(height);
-        self.image.set_color_mod(c);
+        // let c = field_to_color(height);
+        // self.image.set_color_mod(c);
         let img = if height < -0.4 {
             self.layers[0]
-        } else if height <= 0.2 {
+        } else if height <= 0.0 {
             self.layers[1]
-        } else if height <= 0.9 {
+        } else if height <= 0.4 {
             self.layers[2]
         } else {
             self.layers[3]
@@ -195,7 +196,23 @@ impl Field {
             for y in 0..FIELD_HEIGHT {
                 let (xi, yi) = field_to_screen_coords(x, y);
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
-                let color = waves.draw_images(ctx, r, self.0[x][y].position);
+                let color = field_to_color(self.0[x][y].position);
+                graphics::set_color(ctx, color);
+                graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
+
+                // let color = waves.draw_images(ctx, r, self.0[x][y].position);
+            }
+        }
+
+        for x in 0..FIELD_WIDTH {
+            for y in 0..FIELD_HEIGHT {
+                let (xi, yi) = field_to_screen_coords(x, y);
+                let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
+                // let color = field_to_color(self.0[x][y].position);
+                // graphics::set_color(ctx, color);
+                // graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
+
+                // waves.draw_images(ctx, r, self.0[x][y].position);
             }
         }
         Ok(())
@@ -355,13 +372,13 @@ impl game::EventHandler for MainState {
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
                                                        self.player1.location.y as u32);
         let (sx, sy) = p1_field_location;
-        self.field.create_splash(sx, sy, 4, -1.0);
+        self.field.create_splash(sx, sy, 2, -0.3);
 
 
         let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
                                                        self.player2.location.y as u32);
         let (sx, sy) = p2_field_location;
-        self.field.create_splash(sx, sy, 4, 1.0);
+        self.field.create_splash(sx, sy, 2, 0.3);
 
         self.field.update();
         self.player1.update();
