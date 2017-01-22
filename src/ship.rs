@@ -21,7 +21,6 @@ pub enum Buttons {
     Up,
     Left,
     Right,
-    Jump,
 }
 const SHIP_SIZE: f32 = 128.0;
 
@@ -38,8 +37,8 @@ fn magnitude(vec: &Vector2<f32>) -> f32 {
 }
 
 fn calculate_jump_scale(index: usize) -> f32 {
-    let data = vec!(1.0, 0.9, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0);
-    data[0]
+    let data = vec![1.0, 0.95, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0];
+    data[index / 6] * 0.75
 }
 
 pub struct Ship {
@@ -51,15 +50,15 @@ pub struct Ship {
     scale: f32,
     bearing: f32,
     speed: f32,
-    keel_strength: f32,
-    turning_speed: f32,
     turning_torque: f32,
     length: f32,
     width: f32,
     collider_radius: f32,
     velocity_mag: f32,
-    jumping: bool,
     jump_index: usize,
+    pub jumping: bool,
+    pub post_jump: usize,
+    flipped: bool,
 
     keys_down: HashSet<Buttons>,
 }
@@ -73,8 +72,6 @@ impl Ship {
             scale: 1.0,
             image: Image::new(ctx, filename).unwrap(),
             speed: 0.2,
-            keel_strength: 0.1,
-            turning_speed: 0.03,
             turning_torque: 0.001,
             bearing: 0.0,
             length: 128.0,
@@ -83,8 +80,18 @@ impl Ship {
             velocity_mag: 0.0,
             jumping: false,
             jump_index: 0,
+            post_jump: 0,
+            flipped: false,
 
             keys_down: HashSet::new(),
+        }
+    }
+
+    pub fn jump(&mut self) {
+        if !self.jumping && self.post_jump == 0 {
+            println!("Jumping starting?");
+            self.jumping = true;
+            self.jump_index = 0;
         }
     }
 
@@ -95,8 +102,8 @@ impl Ship {
         self.velocity_mag = v_mag;
         let mut acceleration: Vector2<f32> = na::zero();
         let mut torque: f32 = 0.0;
-        let center: Vector2<f32> = self.location +
-                                   Vector2::new(0.5 * self.width, 0.5 * self.length);
+        // let center: Vector2<f32> = self.location +
+        //                            Vector2::new(0.5 * self.width, 0.5 * self.length);
 
         // We want you to have a bit of velocity based
         // on your bearing but not too much, so you can
@@ -132,28 +139,28 @@ impl Ship {
                     // self.bearing += self.turning_speed;
                     torque += self.turning_torque;
                 }
-                Buttons::Jump => {
-                    println!("JUMP");
-                    self.jumping = true;
-                }
             }
         }
 
-        if !self.keys_down.contains(&Buttons::Jump) {
-            println!("NOT JUMP");
-            self.jumping = false;
+        // Cooldown timer that makes you invincible after jumps
+        // but maybe also prevents you from jumping constantly
+        if self.post_jump > 0 {
+            self.post_jump -= 1;
         }
 
         if self.jumping {
+            // println!("Doing jump at index {}, scale is {}",
+            //          self.jump_index,
+            //          self.scale);
             self.scale = calculate_jump_scale(self.jump_index);
-            self.jump_index = (self.jump_index + 1);
+            self.jump_index += 1;
 
-            if(self.jump_index == 11) {
+            if self.jump_index == 61 {
+                // println!("Done jumping");
                 self.scale = 1.0;
                 self.jump_index = 0;
                 self.jumping = false;
-
-                // Splash here!
+                self.post_jump = 30;
             }
         }
 
@@ -172,9 +179,9 @@ impl Ship {
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
-        //println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
-        //println!("location: {:?}, {:?}", self.location.x, self.location.y);
-        //println!("center: {:?}, {:?}, radius: {:?}",
+        // println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
+        // println!("location: {:?}, {:?}", self.location.x, self.location.y);
+        // println!("center: {:?}, {:?}, radius: {:?}",
         //         center.x,
         //         center.y,
         //         self.collider_radius);
@@ -182,12 +189,12 @@ impl Ship {
 
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let size = 128.0;
-        let half_size = 64;
-        let r = graphics::Rect::new(self.location.x as i32 - half_size,
-                                    self.location.y as i32 - half_size,
-                                    (size * self.scale) as u32,
-                                    (size * self.scale) as u32);
+        let size = 128.0 * self.scale;
+        let half_size = size / 2.0;
+        let r = graphics::Rect::new((self.location.x - half_size) as i32,
+                                    (self.location.y - half_size) as i32,
+                                    size as u32,
+                                    size as u32);
         // let c = graphics::Point::new((0.0 * self.scale) as i32,
         //                             (0.0 * self.scale) as i32);
 
@@ -211,5 +218,10 @@ impl Ship {
 
     pub fn get_speed(&self) -> f32 {
         self.velocity_mag
+    }
+
+    pub fn flip(&mut self) {
+        self.flipped = true;
+        println!("Flipped!");
     }
 }

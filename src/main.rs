@@ -26,11 +26,11 @@ use ship::Buttons;
 // SDL2 drawing on Windows appears to be *way*
 // slower than on Linux or Mac.  Ick.
 #[cfg(target_os = "windows")]
-const FIELD_WIDTH: usize = 40;
+const FIELD_WIDTH: usize = 80;
 #[cfg(target_os = "windows")]
-const FIELD_HEIGHT: usize = 30;
+const FIELD_HEIGHT: usize = 60;
 #[cfg(target_os = "windows")]
-const FIELD_CELL_SIZE: u32 = 20;
+const FIELD_CELL_SIZE: u32 = 10;
 
 
 #[cfg(not(target_os = "windows"))]
@@ -76,11 +76,12 @@ fn interp_between_square(t: f64, v1: Color, v2: Color) -> Color {
     let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
 
     let (r2, g2, b2, a2) = v2.rgba();
+    let (fr2, fg2, fb2, fa2) = (r2 as f64, g2 as f64, b2 as f64, a2 as f64);
 
-    let dr = (r2 - r1) as f64;
-    let dg = (g2 - g1) as f64;
-    let db = (b2 - b1) as f64;
-    let da = (a2 - a1) as f64;
+    let dr = fr2 - fr1;
+    let dg = fg2 - fg1;
+    let db = fb2 - fb1;
+    let da = fa2 - fa1;
 
     let t2 = f64::sqrt(t);
     let (rr, rg, rb, ra) = (fr1 + dr * t2, fg1 + dg * t2, fb1 + db * t2, fa1 + da * t2);
@@ -95,9 +96,9 @@ fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
-    let black = Color::RGBA(255, 255, 255, 255);
-    let negative_max = Color::RGBA(255, 128, 128, 255);
-    let positive_max = Color::RGBA(128, 128, 255, 255);
+    let black = Color::RGBA(0, 120, 255, 255);
+    let negative_max = Color::RGBA(0, 70, 128, 255);
+    let positive_max = Color::RGBA(150, 200, 255, 255);
     if val < 0.0 {
         interp_between_square(-val as f64, black, negative_max)
     } else {
@@ -124,13 +125,13 @@ impl WaveImages {
     }
 
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
-        let c = field_to_color(height);
-        self.image.set_color_mod(c);
+        // let c = field_to_color(height);
+        // self.image.set_color_mod(c);
         let img = if height < -0.4 {
             self.layers[0]
-        } else if height <= 0.2 {
+        } else if height <= 0.0 {
             self.layers[1]
-        } else if height <= 0.2 {
+        } else if height <= 0.4 {
             self.layers[2]
         } else {
             self.layers[3]
@@ -184,10 +185,7 @@ impl Field {
             bit.resize(FIELD_HEIGHT, WaveType::default());
             field.push(bit);
         }
-        let mut f = Field(field);
-        // f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
-        // f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
-        f
+        Field(field)
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context, waves: &mut WaveImages) -> GameResult<()> {
@@ -195,7 +193,25 @@ impl Field {
             for y in 0..FIELD_HEIGHT {
                 let (xi, yi) = field_to_screen_coords(x, y);
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
-                let color = waves.draw_images(ctx, r, self.0[x][y].position);
+                let color = field_to_color(self.0[x][y].position);
+                graphics::set_color(ctx, color);
+                // Wow actually putting a ? at the end of this takes us
+                // from 325 to 275 fps.  Wacky.
+                let _ = graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
+
+                // let color = waves.draw_images(ctx, r, self.0[x][y].position);
+            }
+        }
+
+        for x in 0..FIELD_WIDTH {
+            for y in 0..FIELD_HEIGHT {
+                let (xi, yi) = field_to_screen_coords(x, y);
+                let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
+                // let color = field_to_color(self.0[x][y].position);
+                // graphics::set_color(ctx, color);
+                // graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
+
+                waves.draw_images(ctx, r, self.0[x][y].position);
             }
         }
         Ok(())
@@ -295,6 +311,7 @@ impl Field {
     // Maybe should set velocity rather than position?
     fn create_splash(&mut self, x: usize, y: usize, radius: usize, force: f32) {
         let radius = radius / FIELD_CELL_SIZE as usize;
+        // println!("{:?}", radius);
         let max_x = min(x + radius, FIELD_WIDTH);
         let min_x = max(x - radius, 0);
         let max_y = min(y + radius, FIELD_HEIGHT);
@@ -306,7 +323,7 @@ impl Field {
                 // Setting position vs. velocity doesn't appear to make
                 // much difference.
                 // self.0[x][y].position = force;
-                self.0[x][y].velocity += force;
+                self.0[x][y].velocity += force * 0.5;
             }
         }
     }
@@ -346,6 +363,22 @@ impl MainState {
             wave_images: wi,
         }
     }
+
+    fn calculate_flips(&mut self) {
+        let ship_location1 = self.player1.location;
+        let wave_location1 = screen_to_field_coords(ship_location1.x as u32, ship_location1.y as u32);
+        let wave_strength1 = self.field.read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
+        if wave_strength1 > 0.9 {
+            self.player1.flip();
+        }
+
+        let ship_location2 = self.player2.location;
+        let wave_location2 = screen_to_field_coords(ship_location2.x as u32, ship_location2.y as u32);
+        let wave_strength2 = self.field.read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
+        if wave_strength2 > 0.9 {
+            self.player2.flip();
+        }
+    }
 }
 
 
@@ -353,24 +386,43 @@ impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
 
         // Add a wake as the ship moves
+        let max_speed = 25.0;
 
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
                                                        self.player1.location.y as u32);
-        let (sx, sy) = p1_field_location;
-        let max_speed = 25.0;
-        let spd = self.player1.get_speed();
-        println!("{:?}", spd);
-        self.field.create_splash(sx, sy, (40.0 * self.player1.get_speed() / max_speed) as usize, -1.0);
-
-
+        
         let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
                                                        self.player2.location.y as u32);
-        let (sx, sy) = p2_field_location;
-        self.field.create_splash(sx, sy, (40.0 * self.player2.get_speed() / max_speed) as usize, 1.0);
+
+        let (sx1, sy1) = p1_field_location;
+        let (sx2, sy2) = p2_field_location;
 
         self.field.update();
         self.player1.update();
         self.player2.update();
+
+        if self.player1.post_jump == 30 {
+            // create splash from landing
+            println!("Splashing down");
+            self.field.create_splash(sx1, sy1, 
+                                     30, 
+                                    -1.0);
+        } else if !self.player1.jumping {
+            // create wake
+            self.field.create_splash(sx1, sy1, 
+                                     (10.0 * self.player1.get_speed() / max_speed) as usize, 
+                                     -0.3);
+        }
+
+        if self.player2.post_jump == 30 {
+            self.field.create_splash(sx2, sy2, 
+                                     30, 
+                                     1.0);
+        } else if !self.player2.jumping {
+            self.field.create_splash(sx2, sy2, 
+                                     (10.0 * self.player2.get_speed() / max_speed) as usize,
+                                     0.3);
+        }
 
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
@@ -383,6 +435,8 @@ impl game::EventHandler for MainState {
         // Shipwave
         // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32,
         //    self.ship.location.y as i32));
+
+        self.calculate_flips();
 
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
@@ -409,12 +463,12 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_down_event(Buttons::Up),
             Keycode::A => self.player1.key_down_event(Buttons::Left),
             Keycode::D => self.player1.key_down_event(Buttons::Right),
-            Keycode::S => self.player1.key_down_event(Buttons::Jump),
+            Keycode::S => self.player1.jump(),
 
             Keycode::I => self.player2.key_down_event(Buttons::Up),
             Keycode::J => self.player2.key_down_event(Buttons::Left),
             Keycode::L => self.player2.key_down_event(Buttons::Right),
-            Keycode::K => self.player2.key_down_event(Buttons::Jump),
+            Keycode::K => self.player2.jump(),
             _ => (),
         }
 
@@ -426,12 +480,10 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_up_event(Buttons::Up),
             Keycode::A => self.player1.key_up_event(Buttons::Left),
             Keycode::D => self.player1.key_up_event(Buttons::Right),
-            Keycode::S => self.player1.key_up_event(Buttons::Jump),
 
             Keycode::I => self.player2.key_up_event(Buttons::Up),
             Keycode::J => self.player2.key_up_event(Buttons::Left),
             Keycode::L => self.player2.key_up_event(Buttons::Right),
-            Keycode::K => self.player2.key_up_event(Buttons::Jump),
             _ => (),
         }
     }
