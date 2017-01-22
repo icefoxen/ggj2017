@@ -8,14 +8,20 @@ use ggez::graphics::Image;
 use ggez::graphics::Drawable;
 
 use na;
-use na::{Vector1, Vector2, Rotation2, Rotation, Rotate};
+use na::Vector2;
 
 use std::f32::consts;
-use std::time::Duration;
 use std::collections::HashSet;
 
 const DRAG: f32 = 0.97;
 const RAD_TO_DEGREES: f32 = 180.0 / consts::PI;
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum Buttons {
+    Up,
+    Left,
+    Right,
+}
 const SHIP_SIZE: f32 = 128.0;
 
 // Redundant declaration, any way to use constants in main.rs?
@@ -47,7 +53,7 @@ pub struct Ship {
     collider_radius: f32,
     is_speed_large: bool,
 
-    keys_down: HashSet<Keycode>,
+    keys_down: HashSet<Buttons>,
 }
 
 impl Ship {
@@ -74,12 +80,12 @@ impl Ship {
 
     pub fn update(&mut self) {
         let speed = self.speed;
-        let bearing = self.bearing;
         let velocity = self.velocity;
         let v_mag = magnitude(&velocity);
         let mut acceleration: Vector2<f32> = na::zero();
         let mut torque: f32 = 0.0;
-        let center : Vector2<f32> = self.location + Vector2::new(0.5 * self.width, 0.5 * self.length);
+        let center: Vector2<f32> = self.location +
+                                   Vector2::new(0.5 * self.width, 0.5 * self.length);
 
         // We want you to have a bit of velocity based
         // on your bearing but not too much, so you can
@@ -107,32 +113,30 @@ impl Ship {
 
         for keycode in &self.keys_down {
             match *keycode {
-                Keycode::W | Keycode::Up => {
+                Buttons::Up => {
                     let facing_vec_x = f32::cos(self.bearing - consts::PI / 2.0);
                     let facing_vec_y = f32::sin(self.bearing - consts::PI / 2.0);
                     let force = Vector2::new(facing_vec_x, facing_vec_y);
                     acceleration += force;
                 }
-                Keycode::A | Keycode::Left => {
-                    //self.bearing -= self.turning_speed;
+                Buttons::Left => {
+                    // self.bearing -= self.turning_speed;
                     torque -= self.turning_torque;
                 }
-                Keycode::S | Keycode::Down => (),
-                Keycode::D | Keycode::Right => {
+                Buttons::Right => {
                     // self.bearing += self.turning_speed;
                     torque += self.turning_torque;
                 }
-                _ => (),
             }
         }
 
         self.velocity += acceleration;
         self.velocity *= DRAG;
         self.location += velocity * speed as f32;
-        self.location.x = clamp(self.location.x, 
+        self.location.x = clamp(self.location.x,
                                 self.collider_radius,
                                 WINDOW_WIDTH as f32 - self.collider_radius);
-        self.location.y = clamp(self.location.y, 
+        self.location.y = clamp(self.location.y,
                                 self.collider_radius,
                                 WINDOW_HEIGHT as f32 - self.collider_radius);
 
@@ -141,9 +145,12 @@ impl Ship {
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
-        println!("bearing: {:?} velocity: {:?}", bearing, velocity);
+        println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
         println!("location: {:?}, {:?}", self.location.x, self.location.y);
-        println!("center: {:?}, {:?}, radius: {:?}", center.x, center.y, self.collider_radius);
+        println!("center: {:?}, {:?}, radius: {:?}",
+                 center.x,
+                 center.y,
+                 self.collider_radius);
     }
 
 
@@ -154,8 +161,8 @@ impl Ship {
                                     self.location.y as i32 - half_size,
                                     (size * self.scale) as u32,
                                     (size * self.scale) as u32);
-        // let c = graphics::Point::new((64.0 * self.scale) as i32, 
-        //                              (64.0 * self.scale) as i32);
+        // let c = graphics::Point::new((0.0 * self.scale) as i32,
+        //                             (0.0 * self.scale) as i32);
 
         self.image
             .draw_ex(ctx,
@@ -167,12 +174,12 @@ impl Ship {
                      false)
     }
 
-    pub fn key_down_event(&mut self, _keycode: Keycode) {
-        self.keys_down.insert(_keycode);
+    pub fn key_down_event(&mut self, button: Buttons) {
+        self.keys_down.insert(button);
     }
 
-    pub fn key_up_event(&mut self, keycode: Keycode) {
-        self.keys_down.remove(&keycode);
+    pub fn key_up_event(&mut self, button: Buttons) {
+        self.keys_down.remove(&button);
     }
 
     pub fn can_make_splash(&self) -> bool {

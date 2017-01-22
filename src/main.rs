@@ -20,6 +20,7 @@ use std::cmp::{min, max};
 
 mod ship;
 use ship::Ship;
+use ship::Buttons;
 
 
 // SDL2 drawing on Windows appears to be *way*
@@ -94,9 +95,9 @@ fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
-    let black = Color::RGBA(0, 0, 0, 255);
-    let negative_max = Color::RGBA(255, 0, 0, 255);
-    let positive_max = Color::RGBA(0, 0, 255, 255);
+    let black = Color::RGBA(255, 255, 255, 255);
+    let negative_max = Color::RGBA(255, 128, 128, 255);
+    let positive_max = Color::RGBA(128, 128, 255, 255);
     if val < 0.0 {
         interp_between_square(-val as f64, black, negative_max)
     } else {
@@ -106,35 +107,36 @@ fn field_to_color(val: f32) -> Color {
 
 struct WaveImages {
     image: graphics::Image,
-    layers: Vec<graphics::Rect>
+    layers: Vec<graphics::Rect>,
 }
 
 impl WaveImages {
     fn new(ctx: &mut ggez::Context) -> Self {
         let img = graphics::Image::new(ctx, "ocean_tiles.png").unwrap();
-        let layers = vec!(
-                graphics::Rect::new(128, 0, 128, 128),
-                graphics::Rect::new(0, 0, 128, 128),
-                graphics::Rect::new(128, 128, 128, 128),
-                graphics::Rect::new(0, 128, 128, 128),
-            );
+        let layers = vec![graphics::Rect::new(128, 0, 128, 128),
+                          graphics::Rect::new(0, 0, 128, 128),
+                          graphics::Rect::new(128, 128, 128, 128),
+                          graphics::Rect::new(0, 128, 128, 128)];
         WaveImages {
             image: img,
-            layers: layers
+            layers: layers,
         }
     }
 
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
-        self.image.draw(ctx, Some(self.layers[0]), Some(rect));
-        if height > -0.4 {
-            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
-        }
-        if height > 0.2 {
-            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
-        }
-        if height > 0.9 {
-            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
-        }
+        let c = field_to_color(height);
+        self.image.set_color_mod(c);
+        let img = if height < -0.4 {
+            self.layers[0]
+        } else if height <= 0.2 {
+            self.layers[1]
+        } else if height <= 0.2 {
+            self.layers[2]
+        } else {
+            self.layers[3]
+        };
+
+        let _ = self.image.draw(ctx, Some(img), Some(rect));
     }
 }
 
@@ -183,8 +185,8 @@ impl Field {
             field.push(bit);
         }
         let mut f = Field(field);
-        f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
-        f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
+        // f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
+        // f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
         f
     }
 
@@ -300,6 +302,8 @@ impl Field {
         for x in min_x..max_x {
             for y in min_y..max_y {
                 // println!("Setting cell {},{} to force {}", x, y, force);
+                // Setting position vs. velocity doesn't appear to make
+                // much difference.
                 self.0[x][y].position = force;
                 // self.0[x][y].velocity += force;
             }
@@ -323,7 +327,8 @@ impl Field {
 // The ndarray crate would be nice here.
 struct MainState {
     field: Field,
-    ship: Ship,
+    player1: Ship,
+    player2: Ship,
     frame: usize,
     wave_images: WaveImages,
 }
@@ -334,14 +339,11 @@ impl MainState {
         let wi = WaveImages::new(ctx);
         MainState {
             field: f,
-            ship: Ship::new(100 as i32, 100 as i32, ctx),
+            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship.png"),
+            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2.png"),
             frame: 0,
             wave_images: wi,
         }
-    }
-
-    fn draw_ship(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
-        self.ship.draw(ctx)
     }
 }
 
@@ -350,16 +352,28 @@ impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
 
         // Add a wake as the ship moves
-        let ship_field_location = screen_to_field_coords(self.ship.location.x as u32,
-                                                         self.ship.location.y as u32);
-        let (sx, sy) = ship_field_location;
-        if self.ship.can_make_splash()
+
+        let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
+                                                       self.player1.location.y as u32);
+        let (sx, sy) = p1_field_location;
+        if self.player1.can_make_splash()
         {
             self.field.create_splash(sx, sy, 4, -1.0);
         }
 
+
+        let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
+                                                       self.player2.location.y as u32);
+        let (sx, sy) = p2_field_location;
+        if self.player2.can_make_splash()
+        {
+            self.field.create_splash(sx, sy, 4, 1.0);
+        }
+
         self.field.update();
-        self.ship.update();
+        self.player1.update();
+        self.player2.update();
+
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
             println!("Time {}s Frame {}, FPS: {}",
@@ -369,7 +383,7 @@ impl game::EventHandler for MainState {
         }
 
         // Shipwave
-        // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32, 
+        // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32,
         //    self.ship.location.y as i32));
 
         self.frame += 1;
@@ -385,21 +399,60 @@ impl game::EventHandler for MainState {
         self.field.draw(ctx, &mut self.wave_images)?;
 
         // Foreground
-        self.draw_ship(ctx)?;
+        self.player1.draw(ctx)?;
+        self.player2.draw(ctx)?;
 
         ctx.renderer.present();
         Ok(())
     }
 
     fn key_down_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        self.ship.key_down_event(_keycode);
+        match _keycode {
+            Keycode::W => self.player1.key_down_event(Buttons::Up),
+            Keycode::A => self.player1.key_down_event(Buttons::Left),
+            Keycode::D => self.player1.key_down_event(Buttons::Right),
+
+            Keycode::I => self.player2.key_down_event(Buttons::Up),
+            Keycode::J => self.player2.key_down_event(Buttons::Left),
+            Keycode::L => self.player2.key_down_event(Buttons::Right),
+            _ => (),
+        }
+
     }
 
 
     fn key_up_event(&mut self, _keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        self.ship.key_up_event(_keycode);
+        match _keycode {
+            Keycode::W => self.player1.key_up_event(Buttons::Up),
+            Keycode::A => self.player1.key_up_event(Buttons::Left),
+            Keycode::D => self.player1.key_up_event(Buttons::Right),
+
+            Keycode::I => self.player2.key_up_event(Buttons::Up),
+            Keycode::J => self.player2.key_up_event(Buttons::Left),
+            Keycode::L => self.player2.key_up_event(Buttons::Right),
+            _ => (),
+        }
     }
 
+    fn controller_button_down_event(&mut self, _btn: Button) {
+        println!("Button {:?} released", _btn);
+        //     let x = x as u32 / FIELD_CELL_SIZE;
+        //     let y = y as u32 / FIELD_CELL_SIZE;
+        //     println!("Creating splash at {}, {}", x, y);
+        // match button {
+        //     MouseButton::Left => {
+        //         self.player2.key_down_event(Buttons::Up);
+        //     }
+        //     // MouseButton::Left => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+        //     // }
+        //     //
+        //     // MouseButton::Right => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+        //     // }
+        //     _ => (),
+        // }
+    }
     fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
         println!("Mouse clicking at {}, {}", x, y);
         let x = x as u32 / FIELD_CELL_SIZE;
@@ -409,12 +462,40 @@ impl game::EventHandler for MainState {
             MouseButton::Left => {
                 self.field.create_splash(x as usize, y as usize, 3, 1.0);
             }
-
-            MouseButton::Right => {
-                self.field.create_splash(x as usize, y as usize, 3, -1.0);
-            }
             _ => (),
         }
+    }
+
+    fn controller_button_up_event(&mut self, _btn: Button) {
+        println!("Button {:?} pressed", _btn);
+        //     let x = x as u32 / FIELD_CELL_SIZE;
+        //     let y = y as u32 / FIELD_CELL_SIZE;
+        //     println!("Creating splash at {}, {}", x, y);
+        // match button {
+        //     MouseButton::Left => {
+        //         self.player2.key_up_event(Buttons::Up);
+        //     }
+        //     // MouseButton::Left => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+        //     // }
+        //     //
+        //     // MouseButton::Right => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+        //     // }
+        //     _ => (),
+        // }
+    }
+
+    fn controller_axis_event(&mut self, axis: Axis, value: i16) {
+        println!("Axis {:?}, value {}", axis, value);
+        // if xrel < 0 {
+        //     self.player2.key_up_event(Buttons::Right);
+        //     self.player2.key_down_event(Buttons::Left);
+        // } else {
+        //     self.player2.key_up_event(Buttons::Left);
+        //     self.player2.key_down_event(Buttons::Right);
+
+        // }
     }
 }
 
