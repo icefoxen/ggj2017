@@ -57,6 +57,7 @@ pub struct Ship {
     jump_index: usize,
     pub jumping: bool,
     pub post_jump: usize,
+    flipped: bool,
 
     keys_down: HashSet<Buttons>,
 }
@@ -78,6 +79,7 @@ impl Ship {
             jumping: false,
             jump_index: 0,
             post_jump: 0,
+            flipped: false,
 
             keys_down: HashSet::new(),
         }
@@ -135,12 +137,12 @@ impl Ship {
             }
         }
 
-
         // Cooldown timer that makes you invincible after jumps
         // but maybe also prevents you from jumping constantly
         if self.post_jump > 0 {
             self.post_jump -= 1;
         }
+
         if self.jumping {
             // println!("Doing jump at index {}, scale is {}",
             //          self.jump_index,
@@ -207,5 +209,10 @@ impl Ship {
 
     pub fn key_up_event(&mut self, button: Buttons) {
         self.keys_down.remove(&button);
+    }
+
+    pub fn flip(&mut self) {
+        self.flipped = true;
+        println!("Flipped!");
     }
 }

@@ -361,6 +361,22 @@ impl MainState {
             wave_images: wi,
         }
     }
+
+    fn calculate_flips(&mut self) {
+        let ship_location1 = self.player1.location;
+        let wave_location1 = screen_to_field_coords(ship_location1.x as u32, ship_location1.y as u32);
+        let wave_strength1 = self.field.read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
+        if wave_strength1 > 0.9 {
+            self.player1.flip();
+        }
+
+        let ship_location2 = self.player2.location;
+        let wave_location2 = screen_to_field_coords(ship_location2.x as u32, ship_location2.y as u32);
+        let wave_strength2 = self.field.read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
+        if wave_strength2 > 0.9 {
+            self.player2.flip();
+        }
+    }
 }
 
 
@@ -407,6 +423,8 @@ impl game::EventHandler for MainState {
         // Shipwave
         // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32,
         //    self.ship.location.y as i32));
+
+        self.calculate_flips();
 
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
