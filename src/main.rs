@@ -113,6 +113,8 @@ struct WaveImages {
     layers: Vec<graphics::Rect>,
 }
 
+const FLIP_THRESHOLD: f32 = 0.1;
+
 impl WaveImages {
     fn new(ctx: &mut ggez::Context) -> Self {
         let img = graphics::Image::new(ctx, "ocean_tiles.png").unwrap();
@@ -129,11 +131,11 @@ impl WaveImages {
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
         // let c = field_to_color(height);
         // self.image.set_color_mod(c);
-        let img = if height < -0.2 {
+        let img = if height < -FLIP_THRESHOLD {
             self.layers[0]
         } else if height <= 0.0 {
             self.layers[1]
-        } else if height <= 0.2 {
+        } else if height <= FLIP_THRESHOLD {
             self.layers[2]
         } else {
             self.layers[3]
@@ -159,7 +161,7 @@ impl WaveType {
 
     fn restoring_force(&self) -> f32 {
         // -self.position * 0.05
-        -self.velocity * 0.01
+        -self.velocity * 0.002
         // 0.0
     }
 }
@@ -339,6 +341,23 @@ impl Field {
         // f32::abs(self.0[x as usize][y as usize].position)
     }
 
+    pub fn read_strength_area(&self, x: i32, y: i32) -> (f32, f32) {
+        let radius = 2;
+        let x = x as u32;
+        let y = y as u32;
+        let mut max = 0.0;
+        let mut min = 0.0;
+        for xi in (x - radius)..(x + radius) {
+            for yi in (y - radius)..(y + radius) {
+                let value = self.0[x as usize][y as usize].position;
+                max = f32::max(value, max);
+                min = f32::min(value, min);
+            }
+        }
+        (max, min)
+        // f32::abs(self.0[x as usize][y as usize].position)
+    }
+
     #[allow(dead_code)]
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
@@ -355,28 +374,43 @@ struct MainState {
     player2: Ship,
     frame: usize,
     wave_images: WaveImages,
+    player1_wins_image: graphics::Image,
+    player2_wins_image: graphics::Image,
+    reset: bool,
 }
 
 impl MainState {
     fn new(ctx: &mut ggez::Context) -> Self {
         let f = Field::new();
         let wi = WaveImages::new(ctx);
+        let player1_wins_image = graphics::Image::new(ctx, "ship1_wins.png").unwrap();
+        let player2_wins_image = graphics::Image::new(ctx, "ship2_wins.png").unwrap();
         MainState {
             field: f,
             player1: Ship::new(100 as i32, 100 as i32, ctx, "ship1"),
             player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2"),
             frame: 0,
             wave_images: wi,
+            player1_wins_image: player1_wins_image,
+            player2_wins_image: player2_wins_image,
+            reset: false,
         }
+    }
+
+    fn reset(&mut self, ctx: &mut ggez::Context) {
+        self.field = Field::new();
+        self.player1 = Ship::new(100 as i32, 100 as i32, ctx, "ship1");
+        self.player2 = Ship::new(600 as i32, 400 as i32, ctx, "ship2");
+        self.reset = false;
     }
 
     fn calculate_flips(&mut self) {
         let ship_location1 = self.player1.location;
         let wave_location1 = screen_to_field_coords(ship_location1.x as u32,
                                                     ship_location1.y as u32);
-        let wave_strength1 = self.field
-            .read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
-        if wave_strength1 > 0.3 && !self.player1.jumping {
+        let (wave_strength1, _) = self.field
+            .read_strength_area(wave_location1.0 as i32, wave_location1.1 as i32);
+        if wave_strength1 > FLIP_THRESHOLD && !self.player1.jumping {
             self.player1.flip();
         }
 
@@ -386,9 +420,9 @@ impl MainState {
         // println!("Location 1: {:?}, location 2: {:?}",
         //          wave_location1,
         //          wave_location2);
-        let wave_strength2 = self.field
-            .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 < -0.3 && !self.player2.jumping {
+        let (_, wave_strength2) = self.field
+            .read_strength_area(wave_location2.0 as i32, wave_location2.1 as i32);
+        if wave_strength2 < -FLIP_THRESHOLD && !self.player2.jumping {
             self.player2.flip();
         }
 
@@ -403,6 +437,9 @@ impl MainState {
 
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
+        if self.reset {
+            self.reset(ctx);
+        }
 
         // Add a wake as the ship moves
         let max_speed = 20.0;
@@ -423,9 +460,7 @@ impl game::EventHandler for MainState {
         if self.player1.post_jump == 30 {
             // create splash from landing
             // println!("Splashing down");
-            self.field.create_splash(sx1, sy1, 
-                                     40, 
-                                    -1.0);
+            self.field.create_splash(sx1, sy1, 60, -1.0);
         } else if !self.player1.jumping {
             // create wake
             self.field.create_splash(sx1, sy1, 
@@ -434,9 +469,7 @@ impl game::EventHandler for MainState {
         }
 
         if self.player2.post_jump == 30 {
-            self.field.create_splash(sx2, sy2, 
-                                     40, 
-                                     1.0);
+            self.field.create_splash(sx2, sy2, 60, 1.0);
         } else if !self.player2.jumping {
             self.field.create_splash(sx2, sy2, 
                                      (10.0 * self.player2.get_speed() / max_speed) as usize,
@@ -473,6 +506,12 @@ impl game::EventHandler for MainState {
         self.player1.draw(ctx)?;
         self.player2.draw(ctx)?;
 
+        if self.player1.flipped {
+            self.player2_wins_image.draw(ctx, None, None)?;
+        } else if self.player2.flipped {
+            self.player1_wins_image.draw(ctx, None, None)?;
+        }
+
         ctx.renderer.present();
         Ok(())
     }
@@ -488,6 +527,11 @@ impl game::EventHandler for MainState {
             Keycode::J => self.player2.key_down_event(Buttons::Left),
             Keycode::L => self.player2.key_down_event(Buttons::Right),
             Keycode::K => self.player2.jump(),
+            Keycode::Space => {
+                if self.player1.flipped || self.player2.flipped {
+                    self.reset = true;
+                }
+            }
             _ => (),
         }
 
