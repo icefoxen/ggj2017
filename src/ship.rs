@@ -45,6 +45,7 @@ pub struct Ship {
     length: f32,
     width: f32,
     collider_radius: f32,
+    is_speed_large: bool,
 
     keys_down: HashSet<Keycode>,
 }
@@ -65,6 +66,7 @@ impl Ship {
             length: 128.0,
             width: 128.0,
             collider_radius: 64.0 * 1.414,
+            is_speed_large: false,
 
             keys_down: HashSet::new(),
         }
@@ -74,6 +76,7 @@ impl Ship {
         let speed = self.speed;
         let bearing = self.bearing;
         let velocity = self.velocity;
+        let v_mag = magnitude(&velocity);
         let mut acceleration: Vector2<f32> = na::zero();
         let mut torque: f32 = 0.0;
         let center : Vector2<f32> = self.location + Vector2::new(0.5 * self.width, 0.5 * self.length);
@@ -95,6 +98,11 @@ impl Ship {
         //
         // Trying to add torque
 
+        if v_mag > 0.2 {
+            self.is_speed_large = true;
+        } else {
+            self.is_speed_large = false;
+        }
 
 
         for keycode in &self.keys_down {
@@ -146,8 +154,8 @@ impl Ship {
                                     self.location.y as i32 - half_size,
                                     (size * self.scale) as u32,
                                     (size * self.scale) as u32);
-        // let c = graphics::Point::new((0.0 * self.scale) as i32, 
-        //                             (0.0 * self.scale) as i32);
+        // let c = graphics::Point::new((64.0 * self.scale) as i32, 
+        //                              (64.0 * self.scale) as i32);
 
         self.image
             .draw_ex(ctx,
@@ -165,5 +173,9 @@ impl Ship {
 
     pub fn key_up_event(&mut self, keycode: Keycode) {
         self.keys_down.remove(&keycode);
+    }
+
+    pub fn can_make_splash(&self) -> bool {
+        self.is_speed_large
     }
 }

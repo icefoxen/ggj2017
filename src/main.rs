@@ -353,7 +353,10 @@ impl game::EventHandler for MainState {
         let ship_field_location = screen_to_field_coords(self.ship.location.x as u32,
                                                          self.ship.location.y as u32);
         let (sx, sy) = ship_field_location;
-        self.field.create_splash(sx, sy, 4, -1.0);
+        if self.ship.can_make_splash()
+        {
+            self.field.create_splash(sx, sy, 4, -1.0);
+        }
 
         self.field.update();
         self.ship.update();
