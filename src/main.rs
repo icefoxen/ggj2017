@@ -328,9 +328,9 @@ impl Field {
     }
 
     pub fn read_strength(&self, x: i32, y: i32) -> f32 {
-        let x = x as u32 / FIELD_CELL_SIZE;
-        let y = y as u32 / FIELD_CELL_SIZE;
-        self.0[x as usize][y as usize].position
+        let x = x as u32;
+        let y = y as u32;
+        f32::abs(self.0[x as usize][y as usize].position)
     }
 
     #[allow(dead_code)]
@@ -382,7 +382,7 @@ impl MainState {
         //          wave_location2);
         let wave_strength2 = self.field
             .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 > 0.3 {
+        if wave_strength2 > 0.2 {
             self.player2.flip();
         }
 
@@ -418,13 +418,13 @@ impl game::EventHandler for MainState {
             self.field.create_splash(sx1, sy1, 4, -1.0);
         } else if !self.player1.jumping {
             // create wake
-            self.field.create_splash(sx1, sy1, 1, -0.05);
+            // self.field.create_splash(sx1, sy1, 1, -0.05);
         }
 
         if self.player2.post_jump == 30 {
             self.field.create_splash(sx2, sy2, 4, 1.0);
         } else if !self.player2.jumping {
-            self.field.create_splash(sx2, sy2, 1, 0.05);
+            // self.field.create_splash(sx2, sy2, 1, 0.05);
         }
 
         if self.frame % 100 == 0 {
