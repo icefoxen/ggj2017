@@ -371,7 +371,7 @@ impl MainState {
                                                     ship_location1.y as u32);
         let wave_strength1 = self.field
             .read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
-        if wave_strength1 > 0.3 {
+        if wave_strength1 > 0.3 && !self.player1.jumping {
             self.player1.flip();
         }
 
@@ -383,7 +383,7 @@ impl MainState {
         //          wave_location2);
         let wave_strength2 = self.field
             .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 < -0.3 && self.player2.post_jump == 0 {
+        if wave_strength2 < -0.3 && !self.player2.jumping {
             self.player2.flip();
         }
 
