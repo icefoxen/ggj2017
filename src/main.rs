@@ -354,6 +354,7 @@ struct MainState {
     wave_images: WaveImages,
     player1_wins_image: graphics::Image,
     player2_wins_image: graphics::Image,
+    reset: bool,
 }
 
 impl MainState {
@@ -370,7 +371,15 @@ impl MainState {
             wave_images: wi,
             player1_wins_image: player1_wins_image,
             player2_wins_image: player2_wins_image,
+            reset: false,
         }
+    }
+
+    fn reset(&mut self, ctx: &mut ggez::Context) {
+        self.field = Field::new();
+        self.player1 = Ship::new(100 as i32, 100 as i32, ctx, "ship1");
+        self.player2 = Ship::new(600 as i32, 400 as i32, ctx, "ship2");
+        self.reset = false;
     }
 
     fn calculate_flips(&mut self) {
@@ -406,6 +415,9 @@ impl MainState {
 
 impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
+        if self.reset {
+            self.reset(ctx);
+        }
 
         // Add a wake as the ship moves
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
@@ -470,7 +482,6 @@ impl game::EventHandler for MainState {
             self.player2_wins_image.draw(ctx, None, None)?;
         } else if self.player2.flipped {
             self.player1_wins_image.draw(ctx, None, None)?;
-
         }
 
         ctx.renderer.present();
@@ -488,6 +499,11 @@ impl game::EventHandler for MainState {
             Keycode::J => self.player2.key_down_event(Buttons::Left),
             Keycode::L => self.player2.key_down_event(Buttons::Right),
             Keycode::K => self.player2.jump(),
+            Keycode::Space => {
+                if self.player1.flipped || self.player2.flipped {
+                    self.reset = true;
+                }
+            }
             _ => (),
         }
 
