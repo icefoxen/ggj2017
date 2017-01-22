@@ -382,53 +382,56 @@ impl game::EventHandler for MainState {
         }
     }
 
-    fn mouse_button_down_event(&mut self, button: MouseButton, _x: i32, _y: i32) {
+    fn controller_button_down_event(&mut self, _btn: Button) {
+        println!("Button {:?} released", _btn);
         //     let x = x as u32 / FIELD_CELL_SIZE;
         //     let y = y as u32 / FIELD_CELL_SIZE;
         //     println!("Creating splash at {}, {}", x, y);
-        match button {
-            MouseButton::Left => {
-                self.player2.key_down_event(Buttons::Up);
-            }
-            // MouseButton::Left => {
-            //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
-            // }
-            //
-            // MouseButton::Right => {
-            //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
-            // }
-            _ => (),
-        }
+        // match button {
+        //     MouseButton::Left => {
+        //         self.player2.key_down_event(Buttons::Up);
+        //     }
+        //     // MouseButton::Left => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+        //     // }
+        //     //
+        //     // MouseButton::Right => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+        //     // }
+        //     _ => (),
+        // }
     }
 
-    fn mouse_button_up_event(&mut self, button: MouseButton, _x: i32, _y: i32) {
+    fn controller_button_up_event(&mut self, _btn: Button) {
+        println!("Button {:?} pressed", _btn);
         //     let x = x as u32 / FIELD_CELL_SIZE;
         //     let y = y as u32 / FIELD_CELL_SIZE;
         //     println!("Creating splash at {}, {}", x, y);
-        match button {
-            MouseButton::Left => {
-                self.player2.key_up_event(Buttons::Up);
-            }
-            // MouseButton::Left => {
-            //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
-            // }
-            //
-            // MouseButton::Right => {
-            //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
-            // }
-            _ => (),
-        }
+        // match button {
+        //     MouseButton::Left => {
+        //         self.player2.key_up_event(Buttons::Up);
+        //     }
+        //     // MouseButton::Left => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, 1.0);
+        //     // }
+        //     //
+        //     // MouseButton::Right => {
+        //     //     self.field.create_splash(x as usize, y as usize, 3, -1.0);
+        //     // }
+        //     _ => (),
+        // }
     }
 
-    fn mouse_motion_event(&mut self, _state: MouseState, _x: i32, _y: i32, xrel: i32, _yrel: i32) {
-        if xrel < 0 {
-            self.player2.key_up_event(Buttons::Right);
-            self.player2.key_down_event(Buttons::Left);
-        } else {
-            self.player2.key_up_event(Buttons::Left);
-            self.player2.key_down_event(Buttons::Right);
+    fn controller_axis_event(&mut self, axis: Axis, value: i16) {
+        println!("Axis {:?}, value {}", axis, value);
+        // if xrel < 0 {
+        //     self.player2.key_up_event(Buttons::Right);
+        //     self.player2.key_down_event(Buttons::Left);
+        // } else {
+        //     self.player2.key_up_event(Buttons::Left);
+        //     self.player2.key_down_event(Buttons::Right);
 
-        }
+        // }
     }
 }
 
