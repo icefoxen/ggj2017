@@ -17,6 +17,7 @@ use std::vec;
 use std::time::Duration;
 use std::boxed::Box;
 use std::cmp::{min, max};
+use std::f64::consts;
 
 mod ship;
 use ship::Ship;
@@ -60,11 +61,12 @@ fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
     let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
 
     let (r2, g2, b2, a2) = v2.rgba();
+    let (fr2, fg2, fb2, fa2) = (r2 as f64, g2 as f64, b2 as f64, a2 as f64);
 
-    let dr = (r2 - r1) as f64;
-    let dg = (g2 - g1) as f64;
-    let db = (b2 - b1) as f64;
-    let da = (a2 - a1) as f64;
+    let dr = fr2 - fr1;
+    let dg = fg2 - fg1;
+    let db = fb2 - fb1;
+    let da = fa2 - fa1;
 
     let (rr, rg, rb, ra) = (fr1 + dr * t, fg1 + dg * t, fb1 + db * t, fa1 + da * t);
     Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
@@ -156,7 +158,8 @@ impl WaveType {
     }
 
     fn restoring_force(&self) -> f32 {
-        -self.position * 0.05
+        // -self.position * 0.05
+        -self.velocity * 0.01
         // 0.0
     }
 }
@@ -239,10 +242,10 @@ impl Field {
                 self.0[x][y].position *= decay_factor;
 
                 // We might just want to zero this out if it goes below a certain point.
-                // if f32::abs(self.0[x][y].velocity) < 0.001 {
+                // if f32::abs(self.0[x][y].velocity) < 0.0001 {
                 //     self.0[x][y].velocity = 0.0;
                 // }
-                // if f32::abs(self.0[x][y].position) < 0.001 {
+                // if f32::abs(self.0[x][y].position) < 0.0001 {
                 //     self.0[x][y].position = 0.0;
                 // }
             }
@@ -402,7 +405,7 @@ impl game::EventHandler for MainState {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
 
         // Add a wake as the ship moves
-        let max_speed = 25.0;
+        let max_speed = 20.0;
 
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
                                                        self.player1.location.y as u32);
