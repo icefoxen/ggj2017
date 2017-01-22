@@ -95,9 +95,9 @@ fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
 // Color values are 0-255
 // We'll do negative = red and positive = blue
 fn field_to_color(val: f32) -> Color {
-    let black = Color::RGBA(0, 0, 0, 255);
-    let negative_max = Color::RGBA(255, 0, 0, 255);
-    let positive_max = Color::RGBA(0, 0, 255, 255);
+    let black = Color::RGBA(255, 255, 255, 255);
+    let negative_max = Color::RGBA(255, 128, 128, 255);
+    let positive_max = Color::RGBA(128, 128, 255, 255);
     if val < 0.0 {
         interp_between_square(-val as f64, black, negative_max)
     } else {
@@ -124,16 +124,19 @@ impl WaveImages {
     }
 
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
-        self.image.draw(ctx, Some(self.layers[0]), Some(rect));
-        if height > -0.4 {
-            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
-        }
-        if height > 0.2 {
-            self.image.draw(ctx, Some(self.layers[2]), Some(rect));
-        }
-        if height > 0.9 {
-            self.image.draw(ctx, Some(self.layers[3]), Some(rect));
-        }
+        let c = field_to_color(height);
+        self.image.set_color_mod(c);
+        let img = if height < -0.4 {
+            self.layers[0]
+        } else if height <= 0.2 {
+            self.layers[1]
+        } else if height <= 0.2 {
+            self.layers[2]
+        } else {
+            self.layers[3]
+        };
+
+        let _ = self.image.draw(ctx, Some(img), Some(rect));
     }
 }
 
