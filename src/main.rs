@@ -52,23 +52,6 @@ fn field_to_screen_coords(x: usize, y: usize) -> (i32, i32) {
     (xn as i32, yn as i32)
 }
 
-// stolen from ggez-goodies particles; we really should have a general
-// interpolation functionality there.  Does nalgebra or such have one?
-fn interp_between(t: f64, v1: Color, v2: Color) -> Color {
-
-    let (r1, g1, b1, a1) = v1.rgba();
-    let (fr1, fg1, fb1, fa1) = (r1 as f64, g1 as f64, b1 as f64, a1 as f64);
-
-    let (r2, g2, b2, a2) = v2.rgba();
-
-    let dr = (r2 - r1) as f64;
-    let dg = (g2 - g1) as f64;
-    let db = (b2 - b1) as f64;
-    let da = (a2 - a1) as f64;
-
-    let (rr, rg, rb, ra) = (fr1 + dr * t, fg1 + dg * t, fb1 + db * t, fa1 + da * t);
-    Color::RGBA(rr as u8, rg as u8, rb as u8, ra as u8)
-}
 
 fn interp_between_square(t: f64, v1: Color, v2: Color) -> Color {
 
@@ -111,6 +94,8 @@ struct WaveImages {
     layers: Vec<graphics::Rect>,
 }
 
+const FLIP_THRESHOLD: f32 = 0.1;
+
 impl WaveImages {
     fn new(ctx: &mut ggez::Context) -> Self {
         let img = graphics::Image::new(ctx, "ocean_tiles.png").unwrap();
@@ -127,11 +112,11 @@ impl WaveImages {
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
         // let c = field_to_color(height);
         // self.image.set_color_mod(c);
-        let img = if height < -0.2 {
+        let img = if height < -FLIP_THRESHOLD {
             self.layers[0]
         } else if height <= 0.0 {
             self.layers[1]
-        } else if height <= 0.2 {
+        } else if height <= FLIP_THRESHOLD {
             self.layers[2]
         } else {
             self.layers[3]
@@ -334,6 +319,23 @@ impl Field {
         // f32::abs(self.0[x as usize][y as usize].position)
     }
 
+    pub fn read_strength_area(&self, x: i32, y: i32) -> (f32, f32) {
+        let radius = 2;
+        let x = x as u32;
+        let y = y as u32;
+        let mut max = 0.0;
+        let mut min = 0.0;
+        for xi in (x - radius)..(x + radius) {
+            for yi in (y - radius)..(y + radius) {
+                let value = self.0[x as usize][y as usize].position;
+                max = f32::max(value, max);
+                min = f32::min(value, min);
+            }
+        }
+        (max, min)
+        // f32::abs(self.0[x as usize][y as usize].position)
+    }
+
     #[allow(dead_code)]
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
@@ -375,9 +377,9 @@ impl MainState {
         let ship_location1 = self.player1.location;
         let wave_location1 = screen_to_field_coords(ship_location1.x as u32,
                                                     ship_location1.y as u32);
-        let wave_strength1 = self.field
-            .read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
-        if wave_strength1 > 0.3 && !self.player1.jumping {
+        let (wave_strength1, _) = self.field
+            .read_strength_area(wave_location1.0 as i32, wave_location1.1 as i32);
+        if wave_strength1 > FLIP_THRESHOLD && !self.player1.jumping {
             self.player1.flip();
         }
 
@@ -387,9 +389,9 @@ impl MainState {
         // println!("Location 1: {:?}, location 2: {:?}",
         //          wave_location1,
         //          wave_location2);
-        let wave_strength2 = self.field
-            .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 < -0.3 && !self.player2.jumping {
+        let (_, wave_strength2) = self.field
+            .read_strength_area(wave_location2.0 as i32, wave_location2.1 as i32);
+        if wave_strength2 < -FLIP_THRESHOLD && !self.player2.jumping {
             self.player2.flip();
         }
 
@@ -422,14 +424,14 @@ impl game::EventHandler for MainState {
         if self.player1.post_jump == 30 {
             // create splash from landing
             // println!("Splashing down");
-            self.field.create_splash(sx1, sy1, 4, -1.0);
+            self.field.create_splash(sx1, sy1, 6, -1.0);
         } else if !self.player1.jumping {
             // create wake
             self.field.create_splash(sx1, sy1, 1, -0.01);
         }
 
         if self.player2.post_jump == 30 {
-            self.field.create_splash(sx2, sy2, 4, 1.0);
+            self.field.create_splash(sx2, sy2, 6, 1.0);
         } else if !self.player2.jumping {
             self.field.create_splash(sx2, sy2, 1, 0.01);
         }
@@ -465,9 +467,9 @@ impl game::EventHandler for MainState {
         self.player2.draw(ctx)?;
 
         if self.player1.flipped {
-            self.player1_wins_image.draw(ctx, None, None)?;
-        } else if self.player2.flipped {
             self.player2_wins_image.draw(ctx, None, None)?;
+        } else if self.player2.flipped {
+            self.player1_wins_image.draw(ctx, None, None)?;
 
         }
 

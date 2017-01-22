@@ -97,7 +97,7 @@ impl Ship {
     }
 
     pub fn jump(&mut self) {
-        if !self.jumping && self.post_jump == 0 {
+        if !self.flipped && !self.jumping && self.post_jump == 0 {
             // println!("Jumping starting?");
             self.jumping = true;
             self.jump_index = 0;
@@ -213,30 +213,29 @@ impl Ship {
 
         if self.flipping > 0 && self.flipping < FLIPPING_TIMEOUT {
             self.angle_image.draw_ex(ctx,
-                     None,
-                     Some(r),
-                     (self.bearing * RAD_TO_DEGREES) as f64,
-                     None,
-                     false,
-                     false);
+                                     None,
+                                     Some(r),
+                                     (self.bearing * RAD_TO_DEGREES) as f64,
+                                     None,
+                                     false,
+                                     false);
         }
         if self.flipped {
             self.sideways_image.draw_ex(ctx,
-                     None,
-                     Some(r),
-                     (self.bearing * RAD_TO_DEGREES) as f64,
-                     None,
-                     false,
-                     false);
-        }
-        else {
+                                        None,
+                                        Some(r),
+                                        (self.bearing * RAD_TO_DEGREES) as f64,
+                                        None,
+                                        false,
+                                        false);
+        } else {
             self.image.draw_ex(ctx,
-                     None,
-                     Some(r),
-                     (self.bearing * RAD_TO_DEGREES) as f64,
-                     None,
-                     false,
-                     false);
+                               None,
+                               Some(r),
+                               (self.bearing * RAD_TO_DEGREES) as f64,
+                               None,
+                               false,
+                               false);
         }
 
         Ok(())
