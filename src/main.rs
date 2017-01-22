@@ -362,8 +362,8 @@ impl MainState {
         let player2_wins_image = graphics::Image::new(ctx, "ship2_wins.png").unwrap();
         MainState {
             field: f,
-            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship.png"),
-            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2.png"),
+            player1: Ship::new(100 as i32, 100 as i32, ctx, "ship1"),
+            player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2"),
             frame: 0,
             wave_images: wi,
             player1_wins_image: player1_wins_image,
