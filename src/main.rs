@@ -13,6 +13,7 @@ use ggez::graphics;
 use ggez::graphics::Color;
 use ggez::graphics::Drawable;
 
+use std::vec;
 use std::time::Duration;
 use std::boxed::Box;
 use std::cmp::{min, max};
@@ -33,11 +34,11 @@ const FIELD_CELL_SIZE: u32 = 20;
 
 
 #[cfg(not(target_os = "windows"))]
-const FIELD_WIDTH: usize = 200;
+const FIELD_WIDTH: usize = 80;
 #[cfg(not(target_os = "windows"))]
-const FIELD_HEIGHT: usize = 150;
+const FIELD_HEIGHT: usize = 60;
 #[cfg(not(target_os = "windows"))]
-const FIELD_CELL_SIZE: u32 = 4;
+const FIELD_CELL_SIZE: u32 = 10;
 
 fn screen_to_field_coords(x: u32, y: u32) -> (usize, usize) {
     let xn = (x / FIELD_CELL_SIZE) as usize;
@@ -104,6 +105,38 @@ fn field_to_color(val: f32) -> Color {
     }
 }
 
+struct WaveImages {
+    image: graphics::Image,
+    layers: Vec<graphics::Rect>,
+}
+
+impl WaveImages {
+    fn new(ctx: &mut ggez::Context) -> Self {
+        let img = graphics::Image::new(ctx, "ocean_tiles.png").unwrap();
+        let layers = vec![graphics::Rect::new(128, 0, 128, 128),
+                          graphics::Rect::new(0, 0, 128, 128),
+                          graphics::Rect::new(128, 128, 128, 128),
+                          graphics::Rect::new(0, 128, 128, 128)];
+        WaveImages {
+            image: img,
+            layers: layers,
+        }
+    }
+
+    fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
+        self.image.draw(ctx, Some(self.layers[0]), Some(rect));
+        if height > -0.4 {
+            self.image.draw(ctx, Some(self.layers[1]), Some(rect));
+        }
+        if height > 0.2 {
+            self.image.draw(ctx, Some(self.layers[2]), Some(rect));
+        }
+        if height > 0.9 {
+            self.image.draw(ctx, Some(self.layers[3]), Some(rect));
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 struct WaveType {
     velocity: f32,
@@ -154,15 +187,12 @@ impl Field {
         f
     }
 
-    fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult<()> {
+    fn draw(&mut self, ctx: &mut ggez::Context, waves: &mut WaveImages) -> GameResult<()> {
         for x in 0..FIELD_WIDTH {
             for y in 0..FIELD_HEIGHT {
                 let (xi, yi) = field_to_screen_coords(x, y);
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
-                let color = field_to_color(self.0[x][y].position);
-
-                graphics::set_color(ctx, color);
-                graphics::rectangle(ctx, graphics::DrawMode::Fill, r)?;
+                let color = waves.draw_images(ctx, r, self.0[x][y].position);
             }
         }
         Ok(())
@@ -277,6 +307,11 @@ impl Field {
         }
     }
 
+    pub fn read_strength(&self, x: i32, y: i32) -> f32 {
+        let x = x as u32 / FIELD_CELL_SIZE;
+        let y = y as u32 / FIELD_CELL_SIZE;
+        self.0[x as usize][y as usize].position
+    }
 
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
@@ -292,16 +327,19 @@ struct MainState {
     player1: Ship,
     player2: Ship,
     frame: usize,
+    wave_images: WaveImages,
 }
 
 impl MainState {
     fn new(ctx: &mut ggez::Context) -> Self {
         let f = Field::new();
+        let wi = WaveImages::new(ctx);
         MainState {
             field: f,
             player1: Ship::new(100 as i32, 100 as i32, ctx),
             player2: Ship::new(600 as i32, 400 as i32, ctx),
             frame: 0,
+            wave_images: wi,
         }
     }
 }
@@ -334,6 +372,10 @@ impl game::EventHandler for MainState {
                      ggez::timer::get_fps(ctx));
         }
 
+        // Shipwave
+        // println!("Wave at ship {}", self.field.read_strength(self.ship.location.x as i32,
+        //    self.ship.location.y as i32));
+
         self.frame += 1;
         // println!("Frame {}, FPS: {}", self.frame, ggez::timer::get_fps(ctx));
 
@@ -344,7 +386,7 @@ impl game::EventHandler for MainState {
         graphics::clear(ctx);
 
         // Background
-        self.field.draw(ctx)?;
+        self.field.draw(ctx, &mut self.wave_images)?;
 
         // Foreground
         self.player1.draw(ctx)?;
@@ -400,6 +442,18 @@ impl game::EventHandler for MainState {
         //     // }
         //     _ => (),
         // }
+    }
+    fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
+        println!("Mouse clicking at {}, {}", x, y);
+        let x = x as u32 / FIELD_CELL_SIZE;
+        let y = y as u32 / FIELD_CELL_SIZE;
+        println!("Creating splash at {}, {}", x, y);
+        match button {
+            MouseButton::Left => {
+                self.field.create_splash(x as usize, y as usize, 3, 1.0);
+            }
+            _ => (),
+        }
     }
 
     fn controller_button_up_event(&mut self, _btn: Button) {
