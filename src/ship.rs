@@ -37,6 +37,11 @@ fn magnitude(vec: &Vector2<f32>) -> f32 {
     (vec.x.powi(2) + vec.y.powi(2)).sqrt()
 }
 
+fn calculate_jump_scale(index: usize) -> f32 {
+    let data = vec!(1.0, 0.9, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0);
+    data[0]
+}
+
 pub struct Ship {
     pub location: Vector2<f32>,
     pub velocity: Vector2<f32>,
@@ -54,6 +59,7 @@ pub struct Ship {
     collider_radius: f32,
     is_speed_large: bool,
     jumping: bool,
+    jump_index: usize,
 
     keys_down: HashSet<Buttons>,
 }
@@ -76,6 +82,7 @@ impl Ship {
             collider_radius: 64.0 * 1.414,
             is_speed_large: false,
             jumping: false,
+            jump_index: 0,
 
             keys_down: HashSet::new(),
         }
@@ -131,13 +138,28 @@ impl Ship {
                     torque += self.turning_torque;
                 }
                 Buttons::Jump => {
-                    self.jumping = true
+                    println!("JUMP");
+                    self.jumping = true;
                 }
             }
         }
 
-        if self.keys_down.contains(&Buttons::Jump) {
+        if !self.keys_down.contains(&Buttons::Jump) {
+            println!("NOT JUMP");
+            self.jumping = false;
+        }
 
+        if self.jumping {
+            self.scale = calculate_jump_scale(self.jump_index);
+            self.jump_index = (self.jump_index + 1);
+
+            if(self.jump_index == 11) {
+                self.scale = 1.0;
+                self.jump_index = 0;
+                self.jumping = false;
+
+                // Splash here!
+            }
         }
 
         self.velocity += acceleration;
@@ -155,12 +177,12 @@ impl Ship {
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
-        println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
-        println!("location: {:?}, {:?}", self.location.x, self.location.y);
-        println!("center: {:?}, {:?}, radius: {:?}",
-                 center.x,
-                 center.y,
-                 self.collider_radius);
+        //println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
+        //println!("location: {:?}, {:?}", self.location.x, self.location.y);
+        //println!("center: {:?}, {:?}, radius: {:?}",
+        //         center.x,
+        //         center.y,
+        //         self.collider_radius);
     }
 
 
