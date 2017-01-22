@@ -320,7 +320,7 @@ impl Field {
                 // println!("Setting cell {},{} to force {}", x, y, force);
                 // Setting position vs. velocity doesn't appear to make
                 // much difference.
-                self.0[x][y].position = force;
+                // self.0[x][y].position = force;
                 // self.0[x][y].velocity += force;
             }
         }
@@ -329,7 +329,7 @@ impl Field {
     pub fn read_strength(&self, x: i32, y: i32) -> f32 {
         let x = x as u32 / FIELD_CELL_SIZE;
         let y = y as u32 / FIELD_CELL_SIZE;
-        self.0[x as usize][y as usize].position
+        self.0[x as usize][y as usize].velocity
     }
 
     fn sprinkle_random_bits(&mut self) {
@@ -366,16 +366,18 @@ impl MainState {
         let ship_location1 = self.player1.location;
         let wave_location1 = screen_to_field_coords(ship_location1.x as u32, ship_location1.y as u32);
         let wave_strength1 = self.field.read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
-        if wave_strength1 > 0.9 {
+        if wave_strength1 > 0.3 {
             self.player1.flip();
         }
 
         let ship_location2 = self.player2.location;
         let wave_location2 = screen_to_field_coords(ship_location2.x as u32, ship_location2.y as u32);
         let wave_strength2 = self.field.read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 > 0.9 {
+        if wave_strength2 > 0.3 {
             self.player2.flip();
         }
+
+        // println!("wave_strength1 = {:?} wave_strength2 = {:?}", wave_strength1, wave_strength2);
     }
 }
 
@@ -414,10 +416,10 @@ impl game::EventHandler for MainState {
 
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
-            println!("Time {}s Frame {}, FPS: {}",
-                     time,
-                     self.frame,
-                     ggez::timer::get_fps(ctx));
+            //println!("Time {}s Frame {}, FPS: {}",
+            //         time,
+            //         self.frame,
+            //         ggez::timer::get_fps(ctx));
         }
 
         // Shipwave
