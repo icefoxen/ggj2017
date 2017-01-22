@@ -330,7 +330,8 @@ impl Field {
     pub fn read_strength(&self, x: i32, y: i32) -> f32 {
         let x = x as u32;
         let y = y as u32;
-        f32::abs(self.0[x as usize][y as usize].position)
+        self.0[x as usize][y as usize].position
+        // f32::abs(self.0[x as usize][y as usize].position)
     }
 
     #[allow(dead_code)]
@@ -382,7 +383,7 @@ impl MainState {
         //          wave_location2);
         let wave_strength2 = self.field
             .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
-        if wave_strength2 > 0.2 {
+        if wave_strength2 < -0.3 && self.player2.post_jump == 0 {
             self.player2.flip();
         }
 
@@ -418,21 +419,21 @@ impl game::EventHandler for MainState {
             self.field.create_splash(sx1, sy1, 4, -1.0);
         } else if !self.player1.jumping {
             // create wake
-            // self.field.create_splash(sx1, sy1, 1, -0.05);
+            self.field.create_splash(sx1, sy1, 1, -0.01);
         }
 
         if self.player2.post_jump == 30 {
             self.field.create_splash(sx2, sy2, 4, 1.0);
         } else if !self.player2.jumping {
-            // self.field.create_splash(sx2, sy2, 1, 0.05);
+            self.field.create_splash(sx2, sy2, 1, 0.01);
         }
 
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
-            // println!("Time {}s Frame {}, FPS: {}",
-            //         time,
-            //         self.frame,
-            //         ggez::timer::get_fps(ctx));
+            println!("Time {}s Frame {}, FPS: {}",
+                     time,
+                     self.frame,
+                     ggez::timer::get_fps(ctx));
         }
 
         // Shipwave
@@ -580,7 +581,7 @@ impl TitleScreen {
 impl game::EventHandler for TitleScreen {
     fn update(&mut self, ctx: &mut ggez::Context, dt: Duration) -> GameResult<()> {
         if self.done {
-            ctx.quit();
+            ctx.quit()?;
         }
         Ok(())
     }
@@ -612,7 +613,7 @@ fn main() {
     let m = audio::Music::new(&mut ctx, "Trance.ogg").unwrap();
     audio::play_music(&mut ctx, &m).unwrap();
     let state = MainState::new(&mut ctx);
-    let mut g = game::Game::from_state(ctx, state);
+    let g = game::Game::from_state(ctx, state);
 
     g.run().unwrap();
 }
