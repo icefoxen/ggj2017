@@ -127,11 +127,11 @@ impl WaveImages {
     fn draw_images(&mut self, ctx: &mut ggez::Context, rect: graphics::Rect, height: f32) {
         // let c = field_to_color(height);
         // self.image.set_color_mod(c);
-        let img = if height < -0.4 {
+        let img = if height < -0.2 {
             self.layers[0]
         } else if height <= 0.0 {
             self.layers[1]
-        } else if height <= 0.4 {
+        } else if height <= 0.2 {
             self.layers[2]
         } else {
             self.layers[3]
@@ -320,8 +320,9 @@ impl Field {
                 // println!("Setting cell {},{} to force {}", x, y, force);
                 // Setting position vs. velocity doesn't appear to make
                 // much difference.
+                // ...okay, the position makes bigger waves.
                 // self.0[x][y].position = force;
-                // self.0[x][y].velocity += force;
+                self.0[x][y].position += force;
             }
         }
     }
@@ -329,9 +330,10 @@ impl Field {
     pub fn read_strength(&self, x: i32, y: i32) -> f32 {
         let x = x as u32 / FIELD_CELL_SIZE;
         let y = y as u32 / FIELD_CELL_SIZE;
-        self.0[x as usize][y as usize].velocity
+        self.0[x as usize][y as usize].position
     }
 
+    #[allow(dead_code)]
     fn sprinkle_random_bits(&mut self) {
         let tx = rand::random::<usize>() % FIELD_WIDTH;
         let ty = rand::random::<usize>() % FIELD_HEIGHT;
@@ -364,20 +366,31 @@ impl MainState {
 
     fn calculate_flips(&mut self) {
         let ship_location1 = self.player1.location;
-        let wave_location1 = screen_to_field_coords(ship_location1.x as u32, ship_location1.y as u32);
-        let wave_strength1 = self.field.read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
+        let wave_location1 = screen_to_field_coords(ship_location1.x as u32,
+                                                    ship_location1.y as u32);
+        let wave_strength1 = self.field
+            .read_strength(wave_location1.0 as i32, wave_location1.1 as i32);
         if wave_strength1 > 0.3 {
             self.player1.flip();
         }
 
         let ship_location2 = self.player2.location;
-        let wave_location2 = screen_to_field_coords(ship_location2.x as u32, ship_location2.y as u32);
-        let wave_strength2 = self.field.read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
+        let wave_location2 = screen_to_field_coords(ship_location2.x as u32,
+                                                    ship_location2.y as u32);
+        // println!("Location 1: {:?}, location 2: {:?}",
+        //          wave_location1,
+        //          wave_location2);
+        let wave_strength2 = self.field
+            .read_strength(wave_location2.0 as i32, wave_location2.1 as i32);
         if wave_strength2 > 0.3 {
             self.player2.flip();
         }
 
-        // println!("wave_strength1 = {:?} wave_strength2 = {:?}", wave_strength1, wave_strength2);
+        println!("Flipped? {} {}", self.player1.flipped, self.player2.flipped);
+
+        println!("wave_strength1 = {:+} wave_strength2 = {:+}",
+                 wave_strength1,
+                 wave_strength2);
     }
 }
 
@@ -401,22 +414,22 @@ impl game::EventHandler for MainState {
 
         if self.player1.post_jump == 30 {
             // create splash from landing
-            println!("Splashing down");
-            self.field.create_splash(sx1, sy1, 3, -1.0);
+            // println!("Splashing down");
+            self.field.create_splash(sx1, sy1, 4, -1.0);
         } else if !self.player1.jumping {
             // create wake
-            self.field.create_splash(sx1, sy1, 1, -0.3);
+            self.field.create_splash(sx1, sy1, 1, -0.05);
         }
 
         if self.player2.post_jump == 30 {
-            self.field.create_splash(sx2, sy2, 3, 1.0);
+            self.field.create_splash(sx2, sy2, 4, 1.0);
         } else if !self.player2.jumping {
-            self.field.create_splash(sx2, sy2, 1, 0.3);
+            self.field.create_splash(sx2, sy2, 1, 0.05);
         }
 
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
-            //println!("Time {}s Frame {}, FPS: {}",
+            // println!("Time {}s Frame {}, FPS: {}",
             //         time,
             //         self.frame,
             //         ggez::timer::get_fps(ctx));
@@ -497,17 +510,17 @@ impl game::EventHandler for MainState {
         //     _ => (),
         // }
     }
-    fn mouse_button_down_event(&mut self, button: MouseButton, x: i32, y: i32) {
-        println!("Mouse clicking at {}, {}", x, y);
-        let x = x as u32 / FIELD_CELL_SIZE;
-        let y = y as u32 / FIELD_CELL_SIZE;
-        println!("Creating splash at {}, {}", x, y);
-        match button {
-            MouseButton::Left => {
-                self.field.create_splash(x as usize, y as usize, 3, 1.0);
-            }
-            _ => (),
-        }
+    fn mouse_button_down_event(&mut self, _button: MouseButton, _x: i32, _y: i32) {
+        // println!("Mouse clicking at {}, {}", x, y);
+        // let x = x as u32 / FIELD_CELL_SIZE;
+        // let y = y as u32 / FIELD_CELL_SIZE;
+        // println!("Creating splash at {}, {}", x, y);
+        // match button {
+        //     MouseButton::Left => {
+        //         self.field.create_splash(x as usize, y as usize, 3, 1.0);
+        //     }
+        //     _ => (),
+        // }
     }
 
     fn controller_button_up_event(&mut self, _btn: Button) {
@@ -545,14 +558,14 @@ impl game::EventHandler for MainState {
 
 fn default_conf() -> conf::Conf {
     let mut c = conf::Conf::new();
-    c.window_title = String::from("wave-motion-gun");
+    c.window_title = String::from("Flipwrecked");
     // c.window_width
     c
 }
 
 fn main() {
     let c = default_conf();
-    let mut ctx = ggez::Context::load_from_conf("wave-motion-gun", c).unwrap();
+    let mut ctx = ggez::Context::load_from_conf("Flipwrecked", c).unwrap();
     let m = audio::Music::new(&mut ctx, "Trance.ogg").unwrap();
     audio::play_music(&mut ctx, &m).unwrap();
     let state = MainState::new(&mut ctx);

@@ -57,7 +57,7 @@ pub struct Ship {
     jump_index: usize,
     pub jumping: bool,
     pub post_jump: usize,
-    flipped: bool,
+    pub flipped: bool,
 
     keys_down: HashSet<Buttons>,
 }
@@ -87,7 +87,7 @@ impl Ship {
 
     pub fn jump(&mut self) {
         if !self.jumping && self.post_jump == 0 {
-            println!("Jumping starting?");
+            // println!("Jumping starting?");
             self.jumping = true;
             self.jump_index = 0;
         }
