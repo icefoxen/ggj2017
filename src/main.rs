@@ -404,10 +404,12 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_down_event(Buttons::Up),
             Keycode::A => self.player1.key_down_event(Buttons::Left),
             Keycode::D => self.player1.key_down_event(Buttons::Right),
+            Keycode::S => self.player1.key_down_event(Buttons::Jump),
 
             Keycode::I => self.player2.key_down_event(Buttons::Up),
             Keycode::J => self.player2.key_down_event(Buttons::Left),
             Keycode::L => self.player2.key_down_event(Buttons::Right),
+            Keycode::K => self.player2.key_down_event(Buttons::Jump),
             _ => (),
         }
 
@@ -419,10 +421,12 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_up_event(Buttons::Up),
             Keycode::A => self.player1.key_up_event(Buttons::Left),
             Keycode::D => self.player1.key_up_event(Buttons::Right),
+            Keycode::S => self.player1.key_up_event(Buttons::Jump),
 
             Keycode::I => self.player2.key_up_event(Buttons::Up),
             Keycode::J => self.player2.key_up_event(Buttons::Left),
             Keycode::L => self.player2.key_up_event(Buttons::Right),
+            Keycode::K => self.player2.key_up_event(Buttons::Jump),
             _ => (),
         }
     }
