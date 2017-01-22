@@ -50,15 +50,13 @@ pub struct Ship {
     scale: f32,
     bearing: f32,
     speed: f32,
-    keel_strength: f32,
-    turning_speed: f32,
     turning_torque: f32,
     length: f32,
     width: f32,
     collider_radius: f32,
     jump_index: usize,
     pub jumping: bool,
-    pub landed: bool,
+    pub post_jump: usize,
 
     keys_down: HashSet<Buttons>,
 }
@@ -72,8 +70,6 @@ impl Ship {
             scale: 1.0,
             image: Image::new(ctx, filename).unwrap(),
             speed: 0.2,
-            keel_strength: 0.1,
-            turning_speed: 0.03,
             turning_torque: 0.001,
             bearing: 0.0,
             length: 128.0,
@@ -81,14 +77,14 @@ impl Ship {
             collider_radius: 64.0 * 1.414,
             jumping: false,
             jump_index: 0,
-            landed: false,
+            post_jump: 0,
 
             keys_down: HashSet::new(),
         }
     }
 
     pub fn jump(&mut self) {
-        if !self.jumping {
+        if !self.jumping && self.post_jump == 0 {
             println!("Jumping starting?");
             self.jumping = true;
             self.jump_index = 0;
@@ -100,8 +96,8 @@ impl Ship {
         let velocity = self.velocity;
         let mut acceleration: Vector2<f32> = na::zero();
         let mut torque: f32 = 0.0;
-        let center: Vector2<f32> = self.location +
-                                   Vector2::new(0.5 * self.width, 0.5 * self.length);
+        // let center: Vector2<f32> = self.location +
+        //                            Vector2::new(0.5 * self.width, 0.5 * self.length);
 
         // We want you to have a bit of velocity based
         // on your bearing but not too much, so you can
@@ -140,6 +136,11 @@ impl Ship {
         }
 
 
+        // Cooldown timer that makes you invincible after jumps
+        // but maybe also prevents you from jumping constantly
+        if self.post_jump > 0 {
+            self.post_jump -= 1;
+        }
         if self.jumping {
             // println!("Doing jump at index {}, scale is {}",
             //          self.jump_index,
@@ -152,9 +153,7 @@ impl Ship {
                 self.scale = 1.0;
                 self.jump_index = 0;
                 self.jumping = false;
-                self.landed = true;
-
-                // Splash here!
+                self.post_jump = 30;
             }
         }
 

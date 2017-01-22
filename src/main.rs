@@ -381,17 +381,17 @@ impl game::EventHandler for MainState {
         self.player1.update();
         self.player2.update();
 
-        if self.player1.landed {
-
+        if self.player1.post_jump == 30 {
+            // create splash from landing
+            println!("Splashing down");
             self.field.create_splash(sx1, sy1, 3, -1.0);
-            self.player1.landed = false;
         } else if !self.player1.jumping {
+            // create wake
             self.field.create_splash(sx1, sy1, 1, -0.3);
         }
 
-        if self.player2.landed {
+        if self.player2.post_jump == 30 {
             self.field.create_splash(sx2, sy2, 3, 1.0);
-            self.player2.landed = false;
         } else if !self.player2.jumping {
             self.field.create_splash(sx2, sy2, 1, 0.3);
         }
