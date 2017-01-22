@@ -350,18 +350,24 @@ struct MainState {
     player2: Ship,
     frame: usize,
     wave_images: WaveImages,
+    player1_wins_image: graphics::Image,
+    player2_wins_image: graphics::Image,
 }
 
 impl MainState {
     fn new(ctx: &mut ggez::Context) -> Self {
         let f = Field::new();
         let wi = WaveImages::new(ctx);
+        let player1_wins_image = graphics::Image::new(ctx, "ship1_wins.png").unwrap();
+        let player2_wins_image = graphics::Image::new(ctx, "ship2_wins.png").unwrap();
         MainState {
             field: f,
             player1: Ship::new(100 as i32, 100 as i32, ctx, "ship.png"),
             player2: Ship::new(600 as i32, 400 as i32, ctx, "ship2.png"),
             frame: 0,
             wave_images: wi,
+            player1_wins_image: player1_wins_image,
+            player2_wins_image: player2_wins_image,
         }
     }
 
@@ -457,6 +463,13 @@ impl game::EventHandler for MainState {
         // Foreground
         self.player1.draw(ctx)?;
         self.player2.draw(ctx)?;
+
+        if self.player1.flipped {
+            self.player1_wins_image.draw(ctx, None, None)?;
+        } else if self.player2.flipped {
+            self.player2_wins_image.draw(ctx, None, None)?;
+
+        }
 
         ctx.renderer.present();
         Ok(())

@@ -204,7 +204,9 @@ impl Ship {
     }
 
     pub fn key_down_event(&mut self, button: Buttons) {
-        self.keys_down.insert(button);
+        if !self.flipped {
+            self.keys_down.insert(button);
+        }
     }
 
     pub fn key_up_event(&mut self, button: Buttons) {
