@@ -130,7 +130,7 @@ impl WaveImages {
             self.layers[0]
         } else if height <= 0.2 {
             self.layers[1]
-        } else if height <= 0.2 {
+        } else if height <= 0.9 {
             self.layers[2]
         } else {
             self.layers[3]
