@@ -21,7 +21,6 @@ pub enum Buttons {
     Up,
     Left,
     Right,
-    Jump,
 }
 const SHIP_SIZE: f32 = 128.0;
 
@@ -38,8 +37,8 @@ fn magnitude(vec: &Vector2<f32>) -> f32 {
 }
 
 fn calculate_jump_scale(index: usize) -> f32 {
-    let data = vec!(1.0, 0.9, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0);
-    data[0]
+    let data = vec![1.0, 0.95, 1.0, 1.2, 1.5, 1.8, 2.0, 1.8, 1.5, 1.2, 1.0];
+    data[index / 6] * 0.75
 }
 
 pub struct Ship {
@@ -57,8 +56,9 @@ pub struct Ship {
     length: f32,
     width: f32,
     collider_radius: f32,
-    jumping: bool,
     jump_index: usize,
+    pub jumping: bool,
+    pub landed: bool,
 
     keys_down: HashSet<Buttons>,
 }
@@ -81,8 +81,17 @@ impl Ship {
             collider_radius: 64.0 * 1.414,
             jumping: false,
             jump_index: 0,
+            landed: false,
 
             keys_down: HashSet::new(),
+        }
+    }
+
+    pub fn jump(&mut self) {
+        if !self.jumping {
+            println!("Jumping starting?");
+            self.jumping = true;
+            self.jump_index = 0;
         }
     }
 
@@ -127,26 +136,23 @@ impl Ship {
                     // self.bearing += self.turning_speed;
                     torque += self.turning_torque;
                 }
-                Buttons::Jump => {
-                    println!("JUMP");
-                    self.jumping = true;
-                }
             }
         }
 
-        if !self.keys_down.contains(&Buttons::Jump) {
-            println!("NOT JUMP");
-            self.jumping = false;
-        }
 
         if self.jumping {
+            // println!("Doing jump at index {}, scale is {}",
+            //          self.jump_index,
+            //          self.scale);
             self.scale = calculate_jump_scale(self.jump_index);
-            self.jump_index = (self.jump_index + 1);
+            self.jump_index += 1;
 
-            if(self.jump_index == 11) {
+            if self.jump_index == 61 {
+                // println!("Done jumping");
                 self.scale = 1.0;
                 self.jump_index = 0;
                 self.jumping = false;
+                self.landed = true;
 
                 // Splash here!
             }
@@ -167,9 +173,9 @@ impl Ship {
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
-        //println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
-        //println!("location: {:?}, {:?}", self.location.x, self.location.y);
-        //println!("center: {:?}, {:?}, radius: {:?}",
+        // println!("bearing: {:?} velocity: {:?}", self.bearing, velocity);
+        // println!("location: {:?}, {:?}", self.location.x, self.location.y);
+        // println!("center: {:?}, {:?}, radius: {:?}",
         //         center.x,
         //         center.y,
         //         self.collider_radius);
@@ -177,12 +183,12 @@ impl Ship {
 
 
     pub fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let size = 128.0;
-        let half_size = 64;
-        let r = graphics::Rect::new(self.location.x as i32 - half_size,
-                                    self.location.y as i32 - half_size,
-                                    (size * self.scale) as u32,
-                                    (size * self.scale) as u32);
+        let size = 128.0 * self.scale;
+        let half_size = size / 2.0;
+        let r = graphics::Rect::new((self.location.x - half_size) as i32,
+                                    (self.location.y - half_size) as i32,
+                                    size as u32,
+                                    size as u32);
         // let c = graphics::Point::new((0.0 * self.scale) as i32,
         //                             (0.0 * self.scale) as i32);
 

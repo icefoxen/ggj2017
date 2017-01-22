@@ -185,10 +185,7 @@ impl Field {
             bit.resize(FIELD_HEIGHT, WaveType::default());
             field.push(bit);
         }
-        let mut f = Field(field);
-        // f.create_splash(FIELD_WIDTH / 4, FIELD_HEIGHT / 2, 3, -1.0);
-        // f.create_splash(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 3, -1.0);
-        f
+        Field(field)
     }
 
     fn draw(&mut self, ctx: &mut ggez::Context, waves: &mut WaveImages) -> GameResult<()> {
@@ -198,7 +195,9 @@ impl Field {
                 let r = graphics::Rect::new(xi, yi, FIELD_CELL_SIZE, FIELD_CELL_SIZE);
                 let color = field_to_color(self.0[x][y].position);
                 graphics::set_color(ctx, color);
-                graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
+                // Wow actually putting a ? at the end of this takes us
+                // from 325 to 275 fps.  Wacky.
+                let _ = graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
 
                 // let color = waves.draw_images(ctx, r, self.0[x][y].position);
             }
@@ -212,7 +211,7 @@ impl Field {
                 // graphics::set_color(ctx, color);
                 // graphics::rectangle(ctx, graphics::DrawMode::Fill, r);
 
-                // waves.draw_images(ctx, r, self.0[x][y].position);
+                waves.draw_images(ctx, r, self.0[x][y].position);
             }
         }
         Ok(())
@@ -371,18 +370,31 @@ impl game::EventHandler for MainState {
         // Add a wake as the ship moves
         let p1_field_location = screen_to_field_coords(self.player1.location.x as u32,
                                                        self.player1.location.y as u32);
-        let (sx, sy) = p1_field_location;
-        self.field.create_splash(sx, sy, 2, -0.3);
 
 
         let p2_field_location = screen_to_field_coords(self.player2.location.x as u32,
                                                        self.player2.location.y as u32);
-        let (sx, sy) = p2_field_location;
-        self.field.create_splash(sx, sy, 2, 0.3);
+        let (sx1, sy1) = p1_field_location;
+        let (sx2, sy2) = p2_field_location;
 
         self.field.update();
         self.player1.update();
         self.player2.update();
+
+        if self.player1.landed {
+
+            self.field.create_splash(sx1, sy1, 3, -1.0);
+            self.player1.landed = false;
+        } else if !self.player1.jumping {
+            self.field.create_splash(sx1, sy1, 1, -0.3);
+        }
+
+        if self.player2.landed {
+            self.field.create_splash(sx2, sy2, 3, 1.0);
+            self.player2.landed = false;
+        } else if !self.player2.jumping {
+            self.field.create_splash(sx2, sy2, 1, 0.3);
+        }
 
         if self.frame % 100 == 0 {
             let time = ggez::timer::get_time_since_start(ctx).as_secs();
@@ -421,12 +433,12 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_down_event(Buttons::Up),
             Keycode::A => self.player1.key_down_event(Buttons::Left),
             Keycode::D => self.player1.key_down_event(Buttons::Right),
-            Keycode::S => self.player1.key_down_event(Buttons::Jump),
+            Keycode::S => self.player1.jump(),
 
             Keycode::I => self.player2.key_down_event(Buttons::Up),
             Keycode::J => self.player2.key_down_event(Buttons::Left),
             Keycode::L => self.player2.key_down_event(Buttons::Right),
-            Keycode::K => self.player2.key_down_event(Buttons::Jump),
+            Keycode::K => self.player2.jump(),
             _ => (),
         }
 
@@ -438,12 +450,10 @@ impl game::EventHandler for MainState {
             Keycode::W => self.player1.key_up_event(Buttons::Up),
             Keycode::A => self.player1.key_up_event(Buttons::Left),
             Keycode::D => self.player1.key_up_event(Buttons::Right),
-            Keycode::S => self.player1.key_up_event(Buttons::Jump),
 
             Keycode::I => self.player2.key_up_event(Buttons::Up),
             Keycode::J => self.player2.key_up_event(Buttons::Left),
             Keycode::L => self.player2.key_up_event(Buttons::Right),
-            Keycode::K => self.player2.key_up_event(Buttons::Jump),
             _ => (),
         }
     }
