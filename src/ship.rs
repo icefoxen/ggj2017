@@ -21,6 +21,10 @@ const SHIP_SIZE: f32 = 128.0;
 // Redundant declaration, any way to use constants in main.rs?
 const WINDOW_HEIGHT: usize = 600;
 const WINDOW_WIDTH: usize = 800;
+// Again, redundant
+fn clamp(val: f32, lower: f32, upper: f32) -> f32 {
+    f32::min(f32::max(val, lower), upper)
+}
 
 fn magnitude(vec: &Vector2<f32>) -> f32 {
     (vec.x.powi(2) + vec.y.powi(2)).sqrt()
@@ -60,7 +64,7 @@ impl Ship {
             bearing: 0.0,
             length: 128.0,
             width: 128.0,
-            collider_radius: 128.0 * 1.414,
+            collider_radius: 64.0 * 1.414,
 
             keys_down: HashSet::new(),
         }
@@ -117,13 +121,21 @@ impl Ship {
         self.velocity += acceleration;
         self.velocity *= DRAG;
         self.location += velocity * speed as f32;
+        self.location.x = clamp(self.location.x, 
+                                self.collider_radius,
+                                WINDOW_WIDTH as f32 - self.collider_radius);
+        self.location.y = clamp(self.location.y, 
+                                self.collider_radius,
+                                WINDOW_HEIGHT as f32 - self.collider_radius);
+
 
         self.angular_velocity += torque;
         self.bearing += self.angular_velocity;
         self.angular_velocity *= DRAG;
 
         println!("bearing: {:?} velocity: {:?}", bearing, velocity);
-        println!("center: {:?}, {:?}", center.x, center.y);
+        println!("location: {:?}, {:?}", self.location.x, self.location.y);
+        println!("center: {:?}, {:?}, radius: {:?}", center.x, center.y, self.collider_radius);
     }
 
 
